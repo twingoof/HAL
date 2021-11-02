@@ -1,6 +1,17 @@
+--
+-- EPITECH PROJECT, 2021
+-- B-FUN-501-NAN-5-1-HAL-victor.trencic [WSL: Ubuntu]
+-- File description:
+-- Main
+--
+
 module Main where
 
-import Lib
+import Hal
+import System.Environment
+import Control.Exception
+import Errors
 
 main :: IO ()
-main = someFunc
+main = handle catchException $
+    getArgs >>= someFunc
