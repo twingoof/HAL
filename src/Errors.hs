@@ -10,14 +10,15 @@ module Errors where
 import Control.Exception
 import System.Exit
 
-data ParsingException =
-    NoArg
+data HalException =
+    InvalidPath
     deriving Show
 
-instance Exception ParsingException
+instance Exception HalException
 
 exit :: IO ()
 exit = exitWith $ ExitFailure 84
 
-catchException :: ParsingException -> IO ()
+catchException :: HalException -> IO ()
+catchException InvalidPath = putStrLn "One filepath provided is incorrect" >> exit
 catchException _ = exit

@@ -7,5 +7,26 @@
 
 module Hal where
 
-someFunc :: [String] -> IO ()
-someFunc _ = putStrLn "someFunc"
+import Errors
+import Control.Exception
+import Debug.Trace
+import Parser
+
+evalExpr :: String -> Maybe String
+evalExpr input 
+    | Just c <- eval symbol input = Just [c]
+    | otherwise = Nothing
+
+printMaybe :: Maybe String -> IO ()
+printMaybe (Just str) = putStrLn str
+printMaybe Nothing = pure ()
+
+interactive :: IO ()
+interactive = do
+    line <- getLine
+    printMaybe $ evalExpr line
+    interactive
+
+hal :: [String] -> IO ()
+hal [] = interactive
+hal args = pure ()
