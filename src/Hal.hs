@@ -7,5 +7,32 @@
 
 module Hal where
 
-someFunc :: [String] -> IO ()
-someFunc _ = putStrLn "someFunc"
+import Errors
+import Control.Exception
+import Debug.Trace
+import GHC.IO.Handle
+import GHC.IO.Handle.FD
+import Parser
+import Basic
+
+readExpr :: String -> String
+readExpr [] = []
+readExpr input = case parse (spaces >> symbol) input of
+    Left x -> "Found value"
+    Right (Error err) -> "No match " ++ err
+
+prompt :: IO String
+prompt = do
+    putStr "> "
+    hFlush stdout
+    getLine
+
+interactive :: IO ()
+interactive = do
+    line <- prompt
+    putStrLn $ readExpr line
+    interactive
+
+hal :: [String] -> IO ()
+hal [] = interactive
+hal args = pure ()

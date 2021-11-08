@@ -1,6 +1,6 @@
-name:                HAL
+name:                hal
 version:             0.1.0.0
-github:              "Melefo/HAL"
+github:              "Melefo/hal"
 license:             BSD3
 author:              "Melefo"
 maintainer:          "example@example.com"
@@ -13,7 +13,7 @@ copyright:           "2021 Author name here"
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/HAL#readme>
+description:         Please see the README on GitHub at <https://github.com/githubuser/hal#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -22,7 +22,7 @@ library:
   source-dirs: src
 
 executables:
-  HAL-exe:
+  hal-exe:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -30,10 +30,10 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - HAL
+    - hal
 
 tests:
-  HAL-test:
+  hal-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -41,4 +41,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - HAL
+    - hal
