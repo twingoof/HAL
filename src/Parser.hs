@@ -9,15 +9,6 @@ module Parser where
 import Control.Applicative
 import Data.Char
 
-data Type =
-    Number Integer |
-    Boolean Bool |
-    String String |
-    List [Type] |
-    Pair [Type] Type |
-    Atom String
-    deriving Show
-
 newtype Error = Error String
     deriving Show
 
@@ -91,91 +82,3 @@ instance Alternative Parser where
     empty = Parser (Right . Error)
     (<|>) f1 f2 = Parser (alternativeParser f1 f2)
     many parser = Parser (funcMany parser)
-
-funcOneOf :: [Char] -> Data Char
-funcOneOf _ [] = Right (Error [])
-funcOneOf arr str@(x:xs)
-    | x `elem` arr = Left (x, xs)
-    | otherwise = Right (Error str)
-
-oneOf :: [Char] -> Parser Char
-oneOf arr = Parser (funcOneOf arr)
-
-symbol :: Parser Char
-symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
-
-funcSkipMany :: Char -> Data ()
-funcSkipMany c str
-    | head str == c = funcSkipMany c $ tail str
-    | otherwise = Left ((), str)
-
-skipMany :: Char -> Parser ()
-skipMany c = Parser (funcSkipMany c)
-
-funcNoneOf :: [Char] -> Data Char
-funcNoneOf _ [] = Right (Error [])
-funcNoneOf arr str@(x:xs)
-    | x `notElem` arr = Left (x, xs)
-    | otherwise = Right (Error str)
-
-noneOf :: [Char] -> Parser Char
-noneOf arr = Parser (funcNoneOf arr)
-
-spaces :: Parser ()
-spaces = skipMany ' '
-
-funcChar :: Char -> Data Char
-funcChar _ [] = Right (Error [])
-funcChar c str
-    | head str == c = Left (c, tail str)
-    | otherwise = Right (Error str)
-
-char :: Char -> Parser Char
-char c = Parser (funcChar c)
-
-funcParseString :: Data Type
-funcParseString str = case parse (char '"') str of
-    Right err -> Right err
-    Left (c, str) -> case parse (many (noneOf "\"")) str of
-        Right err -> Right err
-        Left (x, str) -> case parse (char '"') str of
-            Right err -> Right err
-            Left (c, str) -> Left (String x, str)
-
-parseString :: Parser Type
-parseString = Parser funcParseString
-
-funcDigit :: Data Char
-funcDigit str
-    | isDigit $ head str = Left (head str, tail str)
-    | otherwise = Right (Error str)
-
-digit :: Parser Char
-digit = Parser funcDigit
-
-funcLetter :: Data Char
-funcLetter str
-    | isAlpha $ head str = Left (head str, tail str)
-    | otherwise = Right (Error str)
-
-letter :: Parser Char
-letter = Parser funcLetter
-
-funcParseAtom :: Data Type
-funcParseAtom str = case parse (letter <|> symbol) str of
-    Right err -> Right err
-    Left (c, str) -> case parse (many (letter <|> digit <|> symbol)) str of
-        Right err -> Right err
-        Left (rest, str) -> case c : rest of
-            "#t" -> Left (Boolean True, str)
-            "#f" -> Left (Boolean False, str)
-            _ -> Left (Atom (c : rest), str)
-
-parseAtom :: Parser Type
-parseAtom = Parser funcParseAtom
-
-readExpr :: String -> String
-readExpr [] = []
-readExpr input = case parse (spaces >> symbol) input of
-    Left x -> "Found value"
-    Right (Error err) -> "No match " ++ err

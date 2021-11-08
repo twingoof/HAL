@@ -10,9 +10,16 @@ module Hal where
 import Errors
 import Control.Exception
 import Debug.Trace
-import Parser
 import GHC.IO.Handle
 import GHC.IO.Handle.FD
+import Parser
+import Basic
+
+readExpr :: String -> String
+readExpr [] = []
+readExpr input = case parse (spaces >> symbol) input of
+    Left x -> "Found value"
+    Right (Error err) -> "No match " ++ err
 
 prompt :: IO String
 prompt = do
