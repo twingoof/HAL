@@ -3,3 +3,4 @@
 hal
 *.lock
 *.cabal
+.vscode/

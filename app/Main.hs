@@ -14,4 +14,4 @@ import Errors
 
 main :: IO ()
 main = handle catchException $
-    getArgs >>= someFunc
+    getArgs >>= hal
