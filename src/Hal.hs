@@ -11,18 +11,19 @@ import Errors
 import Control.Exception
 import Debug.Trace
 import Parser
+import GHC.IO.Handle
+import GHC.IO.Handle.FD
 
-evalExpr :: String -> Maybe String
-evalExpr input = Just input
-
-printMaybe :: Maybe String -> IO ()
-printMaybe (Just str) = putStrLn str
-printMaybe Nothing = pure ()
+prompt :: IO String
+prompt = do
+    putStr "> "
+    hFlush stdout
+    getLine
 
 interactive :: IO ()
 interactive = do
-    line <- getLine
-    printMaybe $ evalExpr line
+    line <- prompt
+    putStrLn $ readExpr line
     interactive
 
 hal :: [String] -> IO ()

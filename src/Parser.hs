@@ -175,6 +175,7 @@ parseAtom :: Parser Type
 parseAtom = Parser funcParseAtom
 
 readExpr :: String -> String
+readExpr [] = []
 readExpr input = case parse (spaces >> symbol) input of
     Left x -> "Found value"
     Right (Error err) -> "No match " ++ err
