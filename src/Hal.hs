@@ -13,9 +13,7 @@ import Debug.Trace
 import Parser
 
 evalExpr :: String -> Maybe String
-evalExpr input 
-    | Just c <- eval symbol input = Just [c]
-    | otherwise = Nothing
+evalExpr input = Just input
 
 printMaybe :: Maybe String -> IO ()
 printMaybe (Just str) = putStrLn str
