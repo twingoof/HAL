@@ -10,6 +10,8 @@ import Basic
 import Parser
 import Control.Applicative
 import Types
+import Test.HUnit.Base (assertEqual)
+import Test.HUnit.Lang (assertEqual)
 
 tests :: Test
 tests = TestList [
@@ -25,7 +27,8 @@ tests = TestList [
     TestLabel "parseString" testParseString,
     TestLabel "parseAtom" testParseAtom,
     TestLabel "parseNumber" testParseNumber,
-    TestLabel "parseQuoted" testParseQuoted
+    TestLabel "parseQuoted" testParseQuoted,
+    TestLabel "parseList" testParseList
     ]
 
 --- basic.hs
@@ -102,6 +105,12 @@ testParseQuoted :: Test
 testParseQuoted = TestCase (do
         assertEqual "found" (Left (List [Atom "quote", Atom "bonjour"],"")) (parse parseQuoted "'bonjour")
         assertEqual "not found" (Right (Error "bonjour")) (parse parseQuoted "bonjour")
+    )
+
+testParseList :: Test 
+testParseList = TestCase (do
+        assertEqual "all good" (Left (List [Atom "une", Atom "string", Number 123], "")) (parse parseList "une string 123")
+        assertEqual "error" (Right (Error "")) (parse parseList "")
     )
 
 main :: IO ()
