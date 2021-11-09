@@ -1,18 +1,34 @@
+--
+-- EPITECH PROJECT, 2021
+-- B-FUN-501-NAN-5-1-HAL-victor.trencic [WSL: Ubuntu]
+-- File description:
+-- Spec
+--
+
 import Test.HUnit
 import Basic
 import Parser
 import Control.Applicative
+import Types
 
 tests :: Test
 tests = TestList [
+    --- basic.hs
     TestLabel "oneOf" testOneOf,
     TestLabel "skipMany" testSkipMany,
     TestLabel "noneOf" testNoneOf,
     TestLabel "char" testChar,
     TestLabel "digit" testDigit,
     TestLabel "letter" testLetter,
-    TestLabel "sepBy" testSepBy
+    TestLabel "sepBy" testSepBy,
+    --- types.hs
+    TestLabel "parseString" testParseString,
+    TestLabel "parseAtom" testParseAtom,
+    TestLabel "parseNumber" testParseNumber,
+    TestLabel "parseQuoted" testParseQuoted
     ]
+
+--- basic.hs
 
 testOneOf :: Test
 testOneOf = TestCase (do
@@ -56,6 +72,36 @@ testSepBy = TestCase (do
         assertEqual "no split" (Left (["bonjour"], "")) (parse (sepBy (many letter) spaces) "bonjour")
         assertEqual "error split" (Right (Error " hello aurevoir bye")) (parse (sepBy (many letter) digit) "bonjour hello aurevoir bye")
         assertEqual "error parse" (Right (Error "bonjour hello aurevoir bye")) (parse (sepBy (many digit) letter) "bonjour hello aurevoir bye")
+    )
+
+--- types.hs
+
+testParseString :: Test 
+testParseString = TestCase (do
+        assertEqual "found" (Left (String "bonjour","")) (parse parseString "\"bonjour\"")
+        assertEqual "not found" (Right (Error "")) (parse parseString "\"bonjour")
+        
+    )
+
+testParseAtom :: Test 
+testParseAtom = TestCase (do
+        assertEqual "found true" (Left (Boolean True,"")) (parse parseAtom "#t")
+        assertEqual "found false" (Left (Boolean False,"")) (parse parseAtom "#f")
+        assertEqual "found atom" (Left (Atom "@123test","")) (parse parseAtom "@123test")
+        assertEqual "not found" (Right (Error "123no")) (parse parseAtom "123no")
+        
+    )
+
+testParseNumber :: Test 
+testParseNumber = TestCase (do
+        assertEqual "found" (Left (Number 123,"")) (parse parseNumber "123")
+        assertEqual "not found" (Right (Error "abc")) (parse parseNumber "abc")
+    )
+
+testParseQuoted :: Test 
+testParseQuoted = TestCase (do
+        assertEqual "found" (Left (List [Atom "quote", Atom "bonjour"],"")) (parse parseQuoted "'bonjour")
+        assertEqual "not found" (Right (Error "bonjour")) (parse parseQuoted "bonjour")
     )
 
 main :: IO ()
