@@ -39,7 +39,7 @@ funcParseAtom [] = Right (Error [])
 funcParseAtom str = case parse (letter <|> symbol) str of
     Right err -> Right err
     Left (c, str) -> case parse (many (letter <|> digit <|> symbol)) str of
-        Right err -> Right err
+        Right err -> Left (Atom [c], str)
         Left (rest, str) -> case c : rest of
             "#t" -> Left (Boolean True, str)
             "#f" -> Left (Boolean False, str)
@@ -76,7 +76,6 @@ funcParseList str = case parse (sepBy parseExpr spaces) str of
 
 parseList :: Parser Type
 parseList = Parser funcParseList
-
 
 funcParsePair :: Data Type
 funcParsePair str = case parse (endBy parseExpr spaces) str of
