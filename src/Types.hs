@@ -79,7 +79,11 @@ parseList = Parser funcParseList
 
 
 funcParsePair :: Data Type
-funcParsePair str =
+funcParsePair str = case parse (endBy parseExpr spaces) str of
+    Right err -> Right err
+    Left (head, str) -> case parse (char '.' >> spaces >> parseExpr) str of
+        Right err -> Right err
+        Left (tail, str) -> Left (Pair head tail, str)
 
 parsePair :: Parser Type
 parsePair = Parser funcParsePair
