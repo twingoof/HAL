@@ -75,7 +75,7 @@ funcSepBy _ _ [] = Right (Error [])
 funcSepBy p1 p2 str = case parse p1 str of
     Right err -> Right err
     Left (a, str) -> case parse (many (p2 >> p1)) str of
-        Right err -> Left ([a], str)
+        Right err -> Right err
         Left (b, str) -> Left (a:b, str)
 
 sepBy :: Parser a -> Parser b -> Parser [a]

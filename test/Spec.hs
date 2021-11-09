@@ -124,7 +124,8 @@ testParseList = TestCase (do
 
 testParseParens :: Test
 testParseParens = TestCase (do
-        assertEqual "success" (Left (List [Atom "une", Atom "string", Number 456], "")) (parse parseParens "(une string 456)")
+        assertEqual "success list" (Left (List [Atom "une", Atom "string", Number 456], "")) (parse parseParens "(une string 456)")
+        assertEqual "success pair" (Left (Pair [Atom "une"] (Atom "string"), "")) (parse parseParens "(une . string)")
         assertEqual "error" (Right (Error "")) (parse parseList "")
     )
 
