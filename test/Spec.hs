@@ -28,7 +28,8 @@ tests = TestList [
     TestLabel "parseAtom" testParseAtom,
     TestLabel "parseNumber" testParseNumber,
     TestLabel "parseQuoted" testParseQuoted,
-    TestLabel "parseList" testParseList
+    TestLabel "parseList" testParseList,
+    TestLabel "parseParens" testParseParens
     ]
 
 --- basic.hs
@@ -110,6 +111,12 @@ testParseQuoted = TestCase (do
 testParseList :: Test 
 testParseList = TestCase (do
         assertEqual "all good" (Left (List [Atom "une", Atom "string", Number 123], "")) (parse parseList "une string 123")
+        assertEqual "error" (Right (Error "")) (parse parseList "")
+    )
+
+testParseParens :: Test
+testParseParens = TestCase (do
+        assertEqual "success" (Left (List [Atom "une", Atom "string", Number 456], "")) (parse parseParens "(une string 456)")
         assertEqual "error" (Right (Error "")) (parse parseList "")
     )
 
