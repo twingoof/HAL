@@ -77,8 +77,9 @@ funcParseList str = case parse (sepBy parseExpr spaces) str of
 parseList :: Parser Type
 parseList = Parser funcParseList
 
+
 funcParsePair :: Data Type
-funcParsePair str = Right (Error [])
+funcParsePair str =
 
 parsePair :: Parser Type
 parsePair = Parser funcParsePair

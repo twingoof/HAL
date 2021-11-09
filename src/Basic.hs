@@ -79,3 +79,14 @@ funcSepBy p1 p2 str = case parse p1 str of
 
 sepBy :: Parser a -> Parser b -> Parser [a]
 sepBy p1 p2 = Parser (funcSepBy p1 p2)
+
+
+funcEndBy :: Parser a -> Parser b -> Data a
+funcEndBy p1 p2 str = case parse p1 str of
+    Right err -> Right err
+    Left (a, str) -> case parse p2 str of
+        Right err -> Right err
+        Left (_, str) -> Left (a, str)
+
+endBy :: Parser a -> Parser b -> Parser [a]
+endBy p1 p2 = many (Parser (funcEndBy p1 p2))
