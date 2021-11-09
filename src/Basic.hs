@@ -20,6 +20,7 @@ oneOf :: [Char] -> Parser Char
 oneOf arr = Parser (funcOneOf arr)
 
 funcSkipMany :: Char -> Data ()
+funcSkipMany _ [] = Right (Error [])
 funcSkipMany c str
     | head str == c = funcSkipMany c $ tail str
     | otherwise = Left ((), str)
@@ -80,8 +81,8 @@ funcSepBy p1 p2 str = case parse p1 str of
 sepBy :: Parser a -> Parser b -> Parser [a]
 sepBy p1 p2 = Parser (funcSepBy p1 p2)
 
-
 funcEndBy :: Parser a -> Parser b -> Data a
+funcEndBy _ _ [] = Right (Error [])
 funcEndBy p1 p2 str = case parse p1 str of
     Right err -> Right err
     Left (a, str) -> case parse p2 str of
