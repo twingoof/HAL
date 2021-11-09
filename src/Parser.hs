@@ -20,9 +20,10 @@ newtype Parser a = Parser {
 
 functorParser :: (a -> b) -> Parser a -> Data b
 functorParser _ _ [] = Right (Error [])
-functorParser fct parser str = case parse parser str of
-    Left (a, res) -> Left (fct a, str)
-    Right err -> Right err
+functorParser fct parser str
+    | Left (a, res) <- parse parser str =
+        Left (fct a, str)
+    | otherwise = Right (Error str)
 
 instance Functor Parser where
     fmap fct parser =
@@ -30,16 +31,18 @@ instance Functor Parser where
 
 applicativeParser :: Parser (a -> b) -> Parser a -> Data b
 applicativeParser _ _ [] = Right (Error [])
-applicativeParser fct parser str = case parse parser str of
-    Right err -> Right err
-    Left (a, res) -> case parse fct res of
-        Right err -> Right err
-        Left (b, final) -> Left (b a, final)
+applicativeParser fct parser str
+    | Left (a, res) <- parse parser str
+    , Left (b, final) <- parse fct res =
+        Left (b a, final)
+    | otherwise = Right (Error str)
 
 funcParserBind :: Parser a -> (a -> Parser b) -> Data b
-funcParserBind parser fct str = case parse parser str of
-        Right err -> Right err
-        Left (a, res) -> parse (fct a) res
+funcParserBind _ _ [] = Right (Error [])
+funcParserBind parser fct str
+    | Left (a, res) <- parse parser str =
+        parse (fct a) res
+    | otherwise = Right (Error str)
 
 parserBind :: Parser a -> (a -> Parser b) -> Parser b
 parserBind parser fct = Parser (funcParserBind parser fct)
@@ -51,11 +54,11 @@ instance Applicative Parser where
 
 monadParser :: Parser a -> (a -> Parser b) -> Data b
 monadParser _ _ [] = Right (Error [])
-monadParser parser fct str = case parse parser str of
-    Right err -> Right err
-    Left (a, res) -> case parse (fct a) res of
-        Right err -> Right err
-        final@(Left b) -> final
+monadParser parser fct str
+    | Left (a, res) <- parse parser str
+    , final@(Left b) <- parse (fct a) res =
+        final
+    | otherwise = Right (Error str)
 
 instance Monad Parser where
     (>>=) parser fct = Parser (monadParser parser fct)
@@ -73,11 +76,13 @@ alternativeParser p1 p2 str
 
 funcMany :: Parser a -> Data [a]
 funcMany parser [] = Left ([], [])
-funcMany parser str = case parse parser str of
-    Left (a, str) -> case funcMany parser str of
-        Left (b, final) -> Left (a : b, final)
-        Right err -> Left ([a], str)
-    Right err -> Right err
+funcMany parser str
+    | Left (a, str) <- parse parser str
+    , Left (b, final) <- funcMany parser str =
+        Left (a : b, final)
+    | Left (a, str) <- parse parser str =
+        Left ([a], str)
+    | otherwise = Right (Error str)
 
 instance Alternative Parser where
     empty = Parser (Right . Error)

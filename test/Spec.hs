@@ -76,14 +76,14 @@ testSepBy :: Test
 testSepBy = TestCase (do
         assertEqual "splitted" (Left (["bonjour", "hello", "aurevoir", "bye"], "")) (parse (sepBy (many letter) spaces) "bonjour hello aurevoir bye")
         assertEqual "no split" (Left (["bonjour"], "")) (parse (sepBy (many letter) spaces) "bonjour")
-        assertEqual "error split" (Right (Error " hello aurevoir bye")) (parse (sepBy (many letter) digit) "bonjour hello aurevoir bye")
+        assertEqual "error split" (Right (Error "bonjour hello aurevoir bye")) (parse (sepBy (many letter) digit) "bonjour hello aurevoir bye")
         assertEqual "error parse" (Right (Error "bonjour hello aurevoir bye")) (parse (sepBy (many digit) letter) "bonjour hello aurevoir bye")
     )
 
 testEndBy :: Test
 testEndBy = TestCase (do
         assertEqual "success" (Left (["bonjour","hello","aurevoir"],"bye")) (parse (endBy (many letter) spaces) "bonjour hello aurevoir bye")
-        assertEqual "fail" (Right (Error "")) (parse (endBy (many letter) spaces) "bonjour")
+        assertEqual "fail" (Right (Error "bonjour")) (parse (endBy (many letter) spaces) "bonjour")
     )
 
 --- types.hs
@@ -91,7 +91,7 @@ testEndBy = TestCase (do
 testParseString :: Test
 testParseString = TestCase (do
         assertEqual "found" (Left (String "bonjour","")) (parse parseString "\"bonjour\"")
-        assertEqual "not found" (Right (Error "")) (parse parseString "\"bonjour")
+        assertEqual "not found" (Right (Error "\"bonjour")) (parse parseString "\"bonjour")
 
     )
 

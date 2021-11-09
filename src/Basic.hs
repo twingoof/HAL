@@ -72,22 +72,22 @@ letter = Parser funcLetter
 
 funcSepBy :: Parser a -> Parser b -> Data [a]
 funcSepBy _ _ [] = Right (Error [])
-funcSepBy p1 p2 str = case parse p1 str of
-    Right err -> Right err
-    Left (a, str) -> case parse (many (p2 >> p1)) str of
-        Right err -> Right err
-        Left (b, str) -> Left (a:b, str)
+funcSepBy p1 p2 str
+    | Left (a, str) <- parse p1 str
+    , Left (b, str) <- parse (many (p2 >> p1)) str =
+        Left (a:b, str)
+    | otherwise = Right (Error str)
 
 sepBy :: Parser a -> Parser b -> Parser [a]
 sepBy p1 p2 = Parser (funcSepBy p1 p2)
 
 funcEndBy :: Parser a -> Parser b -> Data a
 funcEndBy _ _ [] = Right (Error [])
-funcEndBy p1 p2 str = case parse p1 str of
-    Right err -> Right err
-    Left (a, str) -> case parse p2 str of
-        Right err -> Right err
-        Left (_, str) -> Left (a, str)
+funcEndBy p1 p2 str
+    | Left (a, str) <- parse p1 str
+    , Left (_, str) <- parse p2 str =
+        Left (a, str)
+    | otherwise = Right (Error str)
 
 endBy :: Parser a -> Parser b -> Parser [a]
 endBy p1 p2 = many (Parser (funcEndBy p1 p2))
