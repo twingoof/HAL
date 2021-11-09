@@ -23,6 +23,7 @@ tests = TestList [
     TestLabel "digit" testDigit,
     TestLabel "letter" testLetter,
     TestLabel "sepBy" testSepBy,
+    TestLabel "endBy" testEndBy,
     --- types.hs
     TestLabel "parseString" testParseString,
     TestLabel "parseAtom" testParseAtom,
@@ -76,6 +77,12 @@ testSepBy = TestCase (do
         assertEqual "no split" (Left (["bonjour"], "")) (parse (sepBy (many letter) spaces) "bonjour")
         assertEqual "error split" (Right (Error " hello aurevoir bye")) (parse (sepBy (many letter) digit) "bonjour hello aurevoir bye")
         assertEqual "error parse" (Right (Error "bonjour hello aurevoir bye")) (parse (sepBy (many digit) letter) "bonjour hello aurevoir bye")
+    )
+
+testEndBy :: Test
+testEndBy = TestCase (do
+        assertEqual "success" (Left (["bonjour","hello","aurevoir"],"bye")) (parse (endBy (many letter) spaces) "bonjour hello aurevoir bye")
+        assertEqual "fail" (Right (Error "")) (parse (endBy (many letter) spaces) "bonjour")
     )
 
 --- types.hs
