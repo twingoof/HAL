@@ -30,7 +30,8 @@ tests = TestList [
     TestLabel "parseNumber" testParseNumber,
     TestLabel "parseQuoted" testParseQuoted,
     TestLabel "parseList" testParseList,
-    TestLabel "parseParens" testParseParens
+    TestLabel "parseParens" testParseParens,
+    TestLabel "parsePair" testParsePair
     ]
 
 --- basic.hs
@@ -87,35 +88,35 @@ testEndBy = TestCase (do
 
 --- types.hs
 
-testParseString :: Test 
+testParseString :: Test
 testParseString = TestCase (do
         assertEqual "found" (Left (String "bonjour","")) (parse parseString "\"bonjour\"")
         assertEqual "not found" (Right (Error "")) (parse parseString "\"bonjour")
-        
+
     )
 
-testParseAtom :: Test 
+testParseAtom :: Test
 testParseAtom = TestCase (do
         assertEqual "found true" (Left (Boolean True,"")) (parse parseAtom "#t")
         assertEqual "found false" (Left (Boolean False,"")) (parse parseAtom "#f")
         assertEqual "found atom" (Left (Atom "@123test","")) (parse parseAtom "@123test")
         assertEqual "not found" (Right (Error "123no")) (parse parseAtom "123no")
-        
+
     )
 
-testParseNumber :: Test 
+testParseNumber :: Test
 testParseNumber = TestCase (do
         assertEqual "found" (Left (Number 123,"")) (parse parseNumber "123")
         assertEqual "not found" (Right (Error "abc")) (parse parseNumber "abc")
     )
 
-testParseQuoted :: Test 
+testParseQuoted :: Test
 testParseQuoted = TestCase (do
         assertEqual "found" (Left (List [Atom "quote", Atom "bonjour"],"")) (parse parseQuoted "'bonjour")
         assertEqual "not found" (Right (Error "bonjour")) (parse parseQuoted "bonjour")
     )
 
-testParseList :: Test 
+testParseList :: Test
 testParseList = TestCase (do
         assertEqual "all good" (Left (List [Atom "une", Atom "string", Number 123], "")) (parse parseList "une string 123")
         assertEqual "error" (Right (Error "")) (parse parseList "")
@@ -125,6 +126,13 @@ testParseParens :: Test
 testParseParens = TestCase (do
         assertEqual "success" (Left (List [Atom "une", Atom "string", Number 456], "")) (parse parseParens "(une string 456)")
         assertEqual "error" (Right (Error "")) (parse parseList "")
+    )
+
+testParsePair :: Test
+testParsePair = TestCase (do
+        assertEqual "success" (Left (Pair [Atom "une"] (Atom "string"), "")) (parse parsePair "une . string")
+        assertEqual "too many element" (Left (Pair [Atom "une"] (Atom "string"), " . longue")) (parse parsePair "une . string . longue")
+        assertEqual "error" (Right (Error "")) (parse parsePair "")
     )
 
 main :: IO ()
