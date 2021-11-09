@@ -10,7 +10,7 @@ import Control.Applicative
 import Data.Char
 
 newtype Error = Error String
-    deriving Show
+    deriving (Show, Eq)
 
 type Data a = String -> Either (a, String) Error
 
@@ -64,14 +64,15 @@ instance Monad Parser where
 alternativeParser :: Parser a -> Parser a -> Data a
 alternativeParser _ _ [] = Right (Error [])
 alternativeParser p1 p2 str
-    | Right (Error err1) <- parse p1 str
-    , Right (Error err2) <- parse p2 str =
-        Right (Error (err1 ++ err2))
+    | Right _ <- parse p1 str
+    , Right (Error err) <- parse p2 str =
+        Right (Error err)
     | Right err <- parse p1 str =
         parse p2 str
     | otherwise = parse p1 str
 
 funcMany :: Parser a -> Data [a]
+funcMany parser [] = Left ([], [])
 funcMany parser str = case parse parser str of
     Left (a, str) -> case funcMany parser str of
         Left (b, final) -> Left (a : b, final)

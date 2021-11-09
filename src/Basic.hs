@@ -8,6 +8,7 @@
 module Basic where
 import Parser
 import Data.Char
+import Control.Applicative
 
 funcOneOf :: [Char] -> Data Char
 funcOneOf _ [] = Right (Error [])
@@ -51,6 +52,7 @@ spaces :: Parser ()
 spaces = skipMany ' '
 
 funcDigit :: Data Char
+funcDigit [] = Right (Error [])
 funcDigit str
     | isDigit $ head str = Left (head str, tail str)
     | otherwise = Right (Error str)
@@ -59,9 +61,21 @@ digit :: Parser Char
 digit = Parser funcDigit
 
 funcLetter :: Data Char
+funcLetter [] = Right (Error [])
 funcLetter str
     | isAlpha $ head str = Left (head str, tail str)
     | otherwise = Right (Error str)
 
 letter :: Parser Char
 letter = Parser funcLetter
+
+funcSepBy :: Parser a -> Parser b -> Data [a]
+funcSepBy _ _ [] = Right (Error [])
+funcSepBy p1 p2 str = case parse p1 str of
+    Right err -> Right err
+    Left (a, str) -> case parse (many (p2 >> p1)) str of
+        Right err -> Right err
+        Left (b, str) -> Left (a:b, str)
+
+sepBy :: Parser a -> Parser b -> Parser [a]
+sepBy p1 p2 = Parser (funcSepBy p1 p2)

@@ -6,7 +6,6 @@
 --
 
 module Main where
-
 import Hal
 import System.Environment
 import Control.Exception
