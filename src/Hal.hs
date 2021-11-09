@@ -19,8 +19,8 @@ import Types
 readExpr :: String -> String
 readExpr [] = []
 readExpr input = case parse (spaces >> parseExpr) input of
-    Left x -> "Found value"
-    Right (Error err) -> "No match " ++ err
+    Left x -> "Found " ++ show x
+    Right (Error err) -> "No match: " ++ show err
 
 prompt :: IO String
 prompt = do
