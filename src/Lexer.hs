@@ -11,18 +11,6 @@ import Data.List (unwords)
 import Foreign.C (isValidErrno)
 
 
-unwordList :: [Value] -> String
-unwordList = unwords . map showVal
-
-showVal :: Value -> String
-showVal (String contents) = "\"" ++ contents ++ "\""
-showVal (Atom name) = name
-showVal (Number contents) = show contents
-showVal (Boolean True) = "#t"
-showVal (Boolean False) = "#f"
-showVal (List contents) = "(" ++ unwordList contents ++ ")"
-showVal (Pair head tail) = "(" ++ unwordList head ++ "." ++ showVal tail ++ ")"
-
 eval :: Value -> Value 
 eval val@(String _) = val
 eval val@(Number _) = val

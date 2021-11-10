@@ -19,7 +19,9 @@ data Value =
     List [Value] |
     Pair [Value] Value |
     Atom String
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show Value where show = showVal
 
 funcParseString :: Data Value
 funcParseString [] = Right (Error [])
@@ -110,3 +112,15 @@ parseExpr = parseAtom
     <|> parseNumber
     <|> parseQuoted
     <|> parseParens
+
+showVal :: Value -> String
+showVal (String contents) = "\"" ++ contents ++ "\""
+showVal (Atom name) = name
+showVal (Number contents) = show contents
+showVal (Boolean True) = "#t"
+showVal (Boolean False) = "#f"
+showVal (List contents) = "(" ++ unwordList contents ++ ")"
+showVal (Pair head tail) = "(" ++ unwordList head ++ "." ++ showVal tail ++ ")"
+
+unwordList :: [Value] -> String
+unwordList = unwords . map showVal
