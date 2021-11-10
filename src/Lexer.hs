@@ -8,7 +8,11 @@
 module Lexer where
 import Types
 import Data.List (unwords)
+import Foreign.C (isValidErrno)
 
+
+unwordList :: [Value] -> String
+unwordList = unwords . map showVal
 
 showVal :: Value -> String
 showVal (String contents) = "\"" ++ contents ++ "\""
@@ -19,5 +23,8 @@ showVal (Boolean False) = "#f"
 showVal (List contents) = "(" ++ unwordList contents ++ ")"
 showVal (Pair head tail) = "(" ++ unwordList head ++ "." ++ showVal tail ++ ")"
 
-unwordList :: [Value] -> String
-unwordList = unwords . map showVal
+eval :: Value -> Value 
+eval val@(String _) = val
+eval val@(Number _) = val
+eval val@(Boolean _) = val
+eval (List [Atom "quote", val]) = val

@@ -5,3 +5,4 @@ hal
 *.cabal
 .vscode/
 .coverage/
+*.tix

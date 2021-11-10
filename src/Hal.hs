@@ -15,12 +15,14 @@ import GHC.IO.Handle.FD
 import Parser
 import Basic
 import Types
+import System.Posix.Internals (lstat)
+import Lexer
 
-readExpr :: String -> String
-readExpr [] = []
+readExpr :: String -> Value
+readExpr [] = List []
 readExpr input = case parse (spaces >> parseExpr) input of
-    Left x -> "Found " ++ show x
-    Right (Error err) -> "No match: " ++ show err
+    Left (x, str) -> x
+    Right (Error err) -> String $ "No match: " ++ show err
 
 prompt :: IO String
 prompt = do
@@ -31,7 +33,7 @@ prompt = do
 interactive :: IO ()
 interactive = do
     line <- prompt
-    putStrLn $ readExpr line
+    print (eval (readExpr line))
     interactive
 
 hal :: [String] -> IO ()
