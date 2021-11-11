@@ -30,7 +30,7 @@ primitives :: [(String, [Value] -> ThrowsError Value)]
 primitives = [("+", numBinop (+)),
             ("-", numBinop (-)),
             ("*", numBinop (*)),
-            ("/", numBinop div),
+            ("div", numBinop div),
             ("mod", numBinop mod),
             ("quotient", numBinop quot),
             ("remainder", numBinop rem)]
