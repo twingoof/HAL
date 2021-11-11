@@ -27,13 +27,15 @@ apply func args = maybe
     (lookup func primitives)
 
 primitives :: [(String, [Value] -> ThrowsError Value)]
-primitives = [("+", numBinop (+)),
-            ("-", numBinop (-)),
-            ("*", numBinop (*)),
-            ("div", numBinop div),
-            ("mod", numBinop mod),
-            ("quotient", numBinop quot),
-            ("remainder", numBinop rem)]
+primitives = [
+        ("+", numBinop (+)),
+        ("-", numBinop (-)),
+        ("*", numBinop (*)),
+        ("div", numBinop div),
+        ("mod", numBinop mod),
+        ("quotient", numBinop quot),
+        ("remainder", numBinop rem)
+    ]
 
 numBinop :: (Integer -> Integer -> Integer) -> [Value] -> ThrowsError Value
 numBinop _ [] = throwError $ NumArgs 2 []

@@ -33,9 +33,10 @@ showError (NotFunction str func)    = str ++ ": " ++ func
 showError (UnboundVar str val)  = str ++ ": " ++ val
 showError _ = []
 
-trapError :: (MonadError a m, Show a) => m String -> m String
-trapError action = catchError action (return . show)
+trapError :: (MonadError a m, Show a) => Bool -> m String -> m String
+trapError False action = action `catchError` (return . show)
+trapError True action = action `catchError` (throw . LispException . show)
 
 extractValue :: ThrowsError a -> a
 extractValue (Right val) = val
-extractValue (Left err) = throw LispException
+extractValue (Left err) = throw $ LispException ""

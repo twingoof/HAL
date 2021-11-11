@@ -12,14 +12,14 @@ import System.Exit
 
 data HalException =
     InvalidPath |
-    LispException
+    LispException String
     deriving Show
 
 instance Exception HalException
 
-exit :: IO ()
+exit :: IO a
 exit = exitWith $ ExitFailure 84
 
 catchException :: HalException -> IO ()
 catchException InvalidPath = putStrLn "One filepath provided is incorrect" >> exit
-catchException _ = exit
+catchException (LispException str) = putStrLn str >> exit

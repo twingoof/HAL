@@ -7,18 +7,16 @@
 
 module Hal where
 
-import Errors
-import Control.Exception
-import Debug.Trace
 import GHC.IO.Handle
 import GHC.IO.Handle.FD
 import Parser
 import Basic
 import Types
-import System.Posix.Internals (lstat)
 import Lexer
 import Control.Monad.Except
 import LispError
+import Errors
+import Control.Exception
 
 readExpr :: String -> ThrowsError Value
 readExpr [] = throwError Empty
@@ -36,9 +34,32 @@ interactive :: IO ()
 interactive = do
     line <- prompt
     let evaled = fmap show $ readExpr line >>= eval
-    putStrLn $ extractValue $ trapError evaled
-    interactive
+    putStrLn (extractValue $ trapError False evaled) >> interactive
 
-hal :: [String] -> IO ()
-hal [] = interactive
-hal args = pure ()
+catchRead :: IOError -> IO String
+catchRead _ = throw InvalidPath
+
+evalLines :: [String] -> [String]
+evalLines [] = [""]
+evalLines (x:xs) = do
+    let evaled = fmap show $ readExpr x >>= eval
+    extractValue (trapError True evaled) : evalLines xs
+
+evalFile :: String -> IO String
+evalFile path = do
+    input <- lines <$> readFile path `catch` catchRead
+    return $ last $ filter (not . null) $ evalLines $ filter (not . null) input
+
+readFiles :: [String] -> IO [String]
+readFiles [] = pure [""]
+readFiles (x:xs) = do
+    evaled <- evalFile x
+    recurse <- readFiles xs
+    return $ evaled : recurse
+
+hal :: Bool -> [String] -> IO ()
+hal _ [] = interactive
+hal False args = do
+    result <- readFiles args
+    putStrLn $ last $ filter (not . null) result
+hal True args = readFiles args >> interactive
