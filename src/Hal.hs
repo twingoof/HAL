@@ -40,10 +40,10 @@ catchRead :: IOError -> IO String
 catchRead _ = throw InvalidPath
 
 evalLines :: [String] -> [String]
-evalLines [] = [""]
-evalLines (x:xs) = do
-    let evaled = fmap show $ readExpr x >>= eval
-    extractValue (trapError True evaled) : evalLines xs
+evalLines = foldr
+    (\ x ->
+        (:) (extractValue $ trapError True $ fmap show $ readExpr x >>= eval)
+    ) [""]
 
 evalFile :: String -> IO String
 evalFile path = do
