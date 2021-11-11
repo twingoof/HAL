@@ -11,6 +11,7 @@ import Control.Monad.Except
 import Control.Exception
 
 newtype ParserError = Error String
+    deriving (Show, Eq)
 
 type Data a = String -> Either ParserError (a, String)
 

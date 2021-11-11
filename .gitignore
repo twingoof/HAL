@@ -6,3 +6,4 @@ hal
 .vscode/
 .coverage/
 *.tix
+*.scm
