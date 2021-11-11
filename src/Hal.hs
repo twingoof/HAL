@@ -17,23 +17,26 @@ import Basic
 import Types
 import System.Posix.Internals (lstat)
 import Lexer
+import Control.Monad.Except
+import LispError
 
-readExpr :: String -> Value
-readExpr [] = List []
-readExpr input = case parse (spaces >> parseExpr) input of
-    Left (x, str) -> x
-    Right (Error err) -> String $ "No match: " ++ show err
+readExpr :: String -> ThrowsError Value
+readExpr [] = throwError Empty
+readExpr input
+    | Right (x, []) <- parse (spaces >> parseExpr) input =
+        Right x
+    | Left err <- parse (spaces >> parseExpr) input =
+        throwError $ Parsing err
+    | otherwise = throwError $ Parsing $ Error input
 
 prompt :: IO String
-prompt = do
-    putStr "> "
-    hFlush stdout
-    getLine
+prompt = putStr "> " >> hFlush stdout >> getLine
 
 interactive :: IO ()
 interactive = do
     line <- prompt
-    print (eval (readExpr line))
+    let evaled = fmap show $ readExpr line >>= eval
+    putStrLn $ extractValue $ trapError evaled
     interactive
 
 hal :: [String] -> IO ()

@@ -8,20 +8,25 @@
 module Lexer where
 import Types
 import Data.List (unwords)
-import Foreign.C (isValidErrno)
+import Control.Exception
+import Control.Monad.Except
+import LispError
 
+eval :: Value -> ThrowsError Value
+eval val@(String _) = Right val
+eval val@(Number _) = Right val
+eval val@(Boolean _) = Right val
+eval (List [Atom "quote", val]) = Right val
+eval (List (Atom func : args)) = mapM eval args >>= apply func
+eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
-eval :: Value -> Value 
-eval val@(String _) = val
-eval val@(Number _) = val
-eval val@(Boolean _) = val
-eval (List [Atom "quote", val]) = val
-eval (List (Atom func : args)) = apply func $ map eval args
+apply :: String -> [Value] -> ThrowsError Value
+apply func args = maybe
+    (throwError $ NotFunction "Unrecognized primitive function args" func)
+    ($ args)
+    (lookup func primitives)
 
-apply :: String -> [Value] -> Value
-apply func args = maybe (Boolean False) ($ args) $ lookup func primitives
-
-primitives :: [(String, [Value] -> Value)]
+primitives :: [(String, [Value] -> ThrowsError Value)]
 primitives = [("+", numBinop (+)),
             ("-", numBinop (-)),
             ("*", numBinop (*)),
@@ -30,14 +35,16 @@ primitives = [("+", numBinop (+)),
             ("quotient", numBinop quot),
             ("remainder", numBinop rem)]
 
-numBinop :: (Integer -> Integer -> Integer) -> [Value] -> Value
-numBinop op params = Number $ foldl1 op $ map unpackNum params
+numBinop :: (Integer -> Integer -> Integer) -> [Value] -> ThrowsError Value
+numBinop _ [] = throwError $ NumArgs 2 []
+numBinop _ single@[_] = throwError $ NumArgs 2 single
+numBinop op params = mapM unpackNum params >>= Right . Number . foldl1 op
 
-unpackNum :: Value -> Integer 
-unpackNum (Number n) = n
+unpackNum :: Value -> ThrowsError Integer 
+unpackNum (Number n) = Right n
 unpackNum (String n) = let parsed = reads n :: [(Integer, String)] in
                             if null parsed
-                                then 0
-                                else fst $ head parsed
+                                then throwError $ TypeMismatch "Number" $ String n
+                                else Right $ fst $ head parsed
 unpackNum (List [n]) = unpackNum n
-unpackNum _ = 0
+unpackNum not = throwError $ TypeMismatch "Number" not
