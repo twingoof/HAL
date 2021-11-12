@@ -7,32 +7,59 @@
 
 module Hal where
 
-import Errors
-import Control.Exception
-import Debug.Trace
 import GHC.IO.Handle
 import GHC.IO.Handle.FD
 import Parser
 import Basic
+import Types
+import Lexer
+import Control.Monad.Except
+import LispError
+import Errors
+import Control.Exception
 
-readExpr :: String -> String
-readExpr [] = []
-readExpr input = case parse (spaces >> symbol) input of
-    Left x -> "Found value"
-    Right (Error err) -> "No match " ++ err
+readExpr :: String -> ThrowsError Value
+readExpr [] = throwError Empty
+readExpr input
+    | Right (x, []) <- parse (spaces >> parseExpr) input =
+        Right x
+    | Left err <- parse (spaces >> parseExpr) input =
+        throwError $ Parsing err
+    | otherwise = throwError $ Parsing $ Error input
 
 prompt :: IO String
-prompt = do
-    putStr "> "
-    hFlush stdout
-    getLine
+prompt = putStr "> " >> hFlush stdout >> getLine
 
 interactive :: IO ()
 interactive = do
     line <- prompt
-    putStrLn $ readExpr line
-    interactive
+    let evaled = fmap show $ readExpr line >>= eval
+    putStrLn (extractValue $ trapError False evaled) >> interactive
 
-hal :: [String] -> IO ()
-hal [] = interactive
-hal args = pure ()
+catchRead :: IOError -> IO String
+catchRead _ = throw InvalidPath
+
+evalLines :: [String] -> [String]
+evalLines = foldr
+    (\ x ->
+        (:) (extractValue $ trapError True $ fmap show $ readExpr x >>= eval)
+    ) [""]
+
+evalFile :: String -> IO String
+evalFile path = do
+    input <- lines <$> readFile path `catch` catchRead
+    return $ last $ filter (not . null) $ evalLines $ filter (not . null) input
+
+readFiles :: [String] -> IO [String]
+readFiles [] = pure [""]
+readFiles (x:xs) = do
+    evaled <- evalFile x
+    recurse <- readFiles xs
+    return $ evaled : recurse
+
+hal :: Bool -> [String] -> IO ()
+hal _ [] = interactive
+hal False args = do
+    result <- readFiles args
+    putStrLn $ last $ filter (not . null) result
+hal True args = readFiles args >> interactive

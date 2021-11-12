@@ -4,3 +4,6 @@ hal
 *.lock
 *.cabal
 .vscode/
+.coverage/
+*.tix
+*.scm

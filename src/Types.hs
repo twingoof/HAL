@@ -10,37 +10,117 @@ module Types where
 import Parser
 import Basic
 import Control.Applicative
+import Debug.Trace
 
-data Type =
+data Value =
     Number Integer |
     Boolean Bool |
     String String |
-    List [Type] |
-    Pair [Type] Type |
+    List [Value] |
+    Pair [Value] Value |
     Atom String
-    deriving Show
+    deriving (Eq)
 
-funcParseString :: Data Type
-funcParseString str = case parse (char '"') str of
-    Right err -> Right err
-    Left (c, str) -> case parse (many (noneOf "\"")) str of
-        Right err -> Right err
-        Left (x, str) -> case parse (char '"') str of
-            Right err -> Right err
-            Left (c, str) -> Left (String x, str)
+instance Show Value where show = showVal
 
-parseString :: Parser Type
+showVal :: Value -> String
+showVal (String str) = "\"" ++ str ++ "\""
+showVal (Atom name) = name
+showVal (Number num) = show num
+showVal (Boolean True) = "#t"
+showVal (Boolean False) = "#f"
+showVal (List list) = "(" ++ unwordList list ++ ")"
+showVal (Pair head tail) = "(" ++ unwordList head ++ "." ++ showVal tail ++ ")"
+
+unwordList :: [Value] -> String
+unwordList = unwords . map showVal
+
+funcParseString :: Data Value
+funcParseString [] = Left (Error [])
+funcParseString str
+    | Right (c, str) <- parse (char '"') str
+    , Right (x, str) <- parse (many (noneOf "\"")) str
+    , Right (c, str) <- parse (char '"') str =
+        Right (String x, str)
+    | otherwise = Left (Error str)
+
+parseString :: Parser Value
 parseString = Parser funcParseString
 
-funcParseAtom :: Data Type
-funcParseAtom str = case parse (letter <|> symbol) str of
-    Right err -> Right err
-    Left (c, str) -> case parse (many (letter <|> digit <|> symbol)) str of
-        Right err -> Right err
-        Left (rest, str) -> case c : rest of
-            "#t" -> Left (Boolean True, str)
-            "#f" -> Left (Boolean False, str)
-            _ -> Left (Atom (c : rest), str)
+getAtom :: String -> Value
+getAtom "#t" = Boolean True
+getAtom "#f" = Boolean False
+getAtom str = Atom str
 
-parseAtom :: Parser Type
+funcParseAtom :: Data Value
+funcParseAtom [] = Left (Error [])
+funcParseAtom str
+    | Right (c, str) <- parse (letter <|> symbol) str
+    , Right (rest, str) <- parse (many (letter <|> digit <|> symbol)) str =
+        Right (getAtom (c : rest), str)
+    | Right (c, str) <- parse (letter <|> symbol) str =
+        Right (Atom [c], str)
+    | otherwise = Left (Error str)
+
+parseAtom :: Parser Value
 parseAtom = Parser funcParseAtom
+
+funcParseNumber :: Data Value
+funcParseNumber [] = Left (Error [])
+funcParseNumber str
+    | Right (n, str) <- parse (many digit) str =
+        Right (Number (read n :: Integer), str)
+    | otherwise = Left (Error str)
+
+parseNumber :: Parser Value
+parseNumber = Parser funcParseNumber
+
+funcParseQuoted :: Data Value
+funcParseQuoted [] = Left (Error [])
+funcParseQuoted str
+    | Right (c, str) <- parse (char '\'') str
+    , Right (x, str) <- parse parseExpr str =
+        Right (List [Atom "quote", x], str)
+    | otherwise = Left (Error str)
+
+parseQuoted :: Parser Value
+parseQuoted = Parser funcParseQuoted
+
+funcParseList :: Data Value
+funcParseList [] = Left (Error [])
+funcParseList str
+    | Right (a, str) <- parse (sepBy parseExpr spaces) str =
+        Right (List a, str)
+    | otherwise = Left (Error str)
+
+parseList :: Parser Value
+parseList = Parser funcParseList
+
+funcParsePair :: Data Value
+funcParsePair str
+    | Right (head, str) <- parse (endBy parseExpr spaces) str
+    , Right (tail, str) <- parse (char '.' >> spaces >> parseExpr) str =
+        Right (Pair head tail, str)
+    | otherwise = Left (Error str)
+
+parsePair :: Parser Value
+parsePair = Parser funcParsePair
+
+funcParseParens :: Data Value
+funcParseParens [] = Left (Error [])
+funcParseParens str
+    | Right (c, str) <- parse (char '(') str
+    , Right (x, str) <- parse (parseList <|> parsePair) str
+    , Right (c, str) <- parse (char ')') str =
+        Right (x, str)
+    | otherwise = Left (Error str)
+
+parseParens :: Parser Value
+parseParens = Parser funcParseParens
+
+parseExpr :: Parser Value
+parseExpr = parseAtom
+    <|> parseString
+    <|> parseNumber
+    <|> parseQuoted
+    <|> parseParens

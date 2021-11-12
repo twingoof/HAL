@@ -8,38 +8,40 @@
 module Basic where
 import Parser
 import Data.Char
+import Control.Applicative
 
 funcOneOf :: [Char] -> Data Char
-funcOneOf _ [] = Right (Error [])
+funcOneOf _ [] = Left (Error [])
 funcOneOf arr str@(x:xs)
-    | x `elem` arr = Left (x, xs)
-    | otherwise = Right (Error str)
+    | x `elem` arr = Right (x, xs)
+    | otherwise = Left (Error str)
 
 oneOf :: [Char] -> Parser Char
 oneOf arr = Parser (funcOneOf arr)
 
 funcSkipMany :: Char -> Data ()
+funcSkipMany _ [] = Left (Error [])
 funcSkipMany c str
     | head str == c = funcSkipMany c $ tail str
-    | otherwise = Left ((), str)
+    | otherwise = Right ((), str)
 
 skipMany :: Char -> Parser ()
 skipMany c = Parser (funcSkipMany c)
 
 funcNoneOf :: [Char] -> Data Char
-funcNoneOf _ [] = Right (Error [])
+funcNoneOf _ [] = Left (Error [])
 funcNoneOf arr str@(x:xs)
-    | x `notElem` arr = Left (x, xs)
-    | otherwise = Right (Error str)
+    | x `notElem` arr = Right (x, xs)
+    | otherwise = Left (Error str)
 
 noneOf :: [Char] -> Parser Char
 noneOf arr = Parser (funcNoneOf arr)
 
 funcChar :: Char -> Data Char
-funcChar _ [] = Right (Error [])
+funcChar _ [] = Left (Error [])
 funcChar c str
-    | head str == c = Left (c, tail str)
-    | otherwise = Right (Error str)
+    | head str == c = Right (c, tail str)
+    | otherwise = Left (Error str)
 
 char :: Char -> Parser Char
 char c = Parser (funcChar c)
@@ -51,17 +53,41 @@ spaces :: Parser ()
 spaces = skipMany ' '
 
 funcDigit :: Data Char
+funcDigit [] = Left (Error [])
 funcDigit str
-    | isDigit $ head str = Left (head str, tail str)
-    | otherwise = Right (Error str)
+    | isDigit $ head str = Right (head str, tail str)
+    | otherwise = Left (Error str)
 
 digit :: Parser Char
 digit = Parser funcDigit
 
 funcLetter :: Data Char
+funcLetter [] = Left (Error [])
 funcLetter str
-    | isAlpha $ head str = Left (head str, tail str)
-    | otherwise = Right (Error str)
+    | isAlpha $ head str = Right (head str, tail str)
+    | otherwise = Left (Error str)
 
 letter :: Parser Char
 letter = Parser funcLetter
+
+funcSepBy :: Parser a -> Parser b -> Data [a]
+funcSepBy _ _ [] = Left (Error [])
+funcSepBy p1 p2 str
+    | Right (a, str) <- parse p1 str
+    , Right (b, str) <- parse (many (p2 >> p1)) str =
+        Right (a:b, str)
+    | otherwise = Left (Error str)
+
+sepBy :: Parser a -> Parser b -> Parser [a]
+sepBy p1 p2 = Parser (funcSepBy p1 p2)
+
+funcEndBy :: Parser a -> Parser b -> Data a
+funcEndBy _ _ [] = Left (Error [])
+funcEndBy p1 p2 str
+    | Right (a, str) <- parse p1 str
+    , Right (_, str) <- parse p2 str =
+        Right (a, str)
+    | otherwise = Left (Error str)
+
+endBy :: Parser a -> Parser b -> Parser [a]
+endBy p1 p2 = many (Parser (funcEndBy p1 p2))

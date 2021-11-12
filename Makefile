@@ -9,6 +9,10 @@ NAME	=	hal
 
 BINPATH	=	$(shell stack path --local-install-root)
 
+COVPATH	=	$(shell stack path --local-hpc-root)
+
+COVDIR	=	.coverage
+
 CP		=	cp
 
 all: $(NAME)
@@ -22,9 +26,11 @@ clean:
 
 fclean: clean
 	$(RM) $(NAME)
+	$(RM) -r $(COVDIR)
 
 tests_run:
-	stack test
+	stack test --coverage
+	$(CP) -r $(COVPATH) ./$(COVDIR)
 
 re: fclean all
 
