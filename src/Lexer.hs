@@ -28,19 +28,24 @@ apply func args = maybe
 
 primitives :: [(String, [Value] -> ThrowsError Value)]
 primitives = [
-        ("+", numBinop (+)),
-        ("-", numBinop (-)),
-        ("*", numBinop (*)),
+        ("+", numInfBinop (+) 0),
+        ("-", numInfBinop (-) 0),
+        ("*", numInfBinop (*) 1),
         ("div", numBinop div),
         ("mod", numBinop mod),
         ("quotient", numBinop quot),
         ("remainder", numBinop rem)
     ]
 
+numInfBinop :: (Integer -> Integer -> Integer) -> Integer -> [Value] -> ThrowsError Value
+numInfBinop _ _ [] = throwError $ NumArgs 1 []
+numInfBinop op def [x] = mapM unpackNum [Number def, x] >>= Right . Number . foldl1 op
+numInfBinop op _ params = mapM unpackNum params >>= Right . Number . foldl1 op
+
 numBinop :: (Integer -> Integer -> Integer) -> [Value] -> ThrowsError Value
 numBinop _ [] = throwError $ NumArgs 2 []
-numBinop _ single@[_] = throwError $ NumArgs 2 single
-numBinop op params = mapM unpackNum params >>= Right . Number . foldl1 op
+numBinop op params@[x,xs] = mapM unpackNum params >>= Right . Number . foldl1 op
+numBinop _ params = throwError $ NumArgs 2 params
 
 unpackNum :: Value -> ThrowsError Integer 
 unpackNum (Number n) = Right n
