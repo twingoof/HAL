@@ -30,7 +30,7 @@ showVal (Number num) = show num
 showVal (Boolean True) = "#t"
 showVal (Boolean False) = "#f"
 showVal (List list) = "(" ++ unwordList list ++ ")"
-showVal (Pair head tail) = "(" ++ unwordList head ++ "." ++ showVal tail ++ ")"
+showVal (Pair head tail) = "(" ++ unwordList head ++ " . " ++ showVal tail ++ ")"
 
 unwordList :: [Value] -> String
 unwordList = unwords . map showVal
@@ -88,6 +88,7 @@ parseQuoted = Parser funcParseQuoted
 
 funcParseList :: Data Value
 funcParseList [] = Left (Error [])
+funcParseList str@(')':xs) = Right (List [], str)
 funcParseList str
     | Right (a, str) <- parse (sepBy parseExpr spaces) str =
         Right (List a, str)
@@ -110,7 +111,7 @@ funcParseParens :: Data Value
 funcParseParens [] = Left (Error [])
 funcParseParens str
     | Right (c, str) <- parse (char '(') str
-    , Right (x, str) <- parse (parseList <|> parsePair) str
+    , Right (x, str) <- parse (parsePair <|> parseList) str
     , Right (c, str) <- parse (char ')') str =
         Right (x, str)
     | otherwise = Left (Error str)
