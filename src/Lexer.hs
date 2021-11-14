@@ -10,6 +10,7 @@ import Types
 import Control.Monad.Except
 import LispError
 import Unpack
+import Data.List
 
 numPrimitives :: [(String, [Value] -> ThrowsError Value)]
 numPrimitives = [
@@ -62,12 +63,12 @@ apply func args = maybe
 
 numInfBinop :: (Integer -> Integer -> Integer) -> Integer -> [Value] -> ThrowsError Value
 numInfBinop _ _ [] = throwError $ NumArgs 1 []
-numInfBinop op def [x] = mapM unpackNum [Number def, x] >>= Right . Number . foldl1 op
-numInfBinop op _ params = mapM unpackNum params >>= Right . Number . foldl1 op
+numInfBinop op def [x] = mapM unpackNum [Number def, x] >>= Right . Number . foldl1' op
+numInfBinop op _ params = mapM unpackNum params >>= Right . Number . foldl1' op
 
 numBinop :: (Integer -> Integer -> Integer) -> [Value] -> ThrowsError Value
 numBinop _ [] = throwError $ NumArgs 2 []
-numBinop op params@[_,_] = mapM unpackNum params >>= Right . Number . foldl1 op
+numBinop op params@[_,_] = mapM unpackNum params >>= Right . Number . foldl1' op
 numBinop _ params = throwError $ NumArgs 2 params
 
 numBoolBinop :: (Integer -> Integer -> Bool) -> [Value] -> ThrowsError Value
@@ -80,7 +81,9 @@ boolBoolBinop :: (Bool -> Bool -> Bool) -> [Value] -> ThrowsError Value
 boolBoolBinop = boolBinop unpackBool
 
 boolBinop :: (Value -> ThrowsError a) -> (a -> a -> Bool) -> [Value] -> ThrowsError Value
-boolBinop unpack op [x] = Right $ Boolean False
+boolBinop unpack op [x]
+    | Right _ <- unpack x = Right $ Boolean True
+    | Left x <- unpack x = Left x
 boolBinop unpack op [x,y]
     | Right x <- unpack x
     , Right y <- unpack y = Right $ Boolean $ op x y
