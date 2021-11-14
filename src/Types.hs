@@ -10,15 +10,10 @@ module Types where
 import Parser
 import Basic
 import Control.Applicative
-import Debug.Trace
 
 data Value =
-    Number Integer |
-    Boolean Bool |
-    String String |
-    List [Value] |
-    Pair [Value] Value |
-    Atom String
+    Number Integer | Boolean Bool | String String |
+    List [Value] | Pair [Value] Value | Atom String
     deriving (Eq)
 
 instance Show Value where show = showVal
@@ -120,8 +115,5 @@ parseParens :: Parser Value
 parseParens = Parser funcParseParens
 
 parseExpr :: Parser Value
-parseExpr = parseAtom
-    <|> parseString
-    <|> parseNumber
-    <|> parseQuoted
-    <|> parseParens
+parseExpr = parseAtom <|> parseString <|> parseNumber
+    <|> parseQuoted <|> parseParens
