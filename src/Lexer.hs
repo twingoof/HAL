@@ -7,10 +7,10 @@
 
 module Lexer where
 import Types
-import Data.List (unwords)
-import Control.Exception
 import Control.Monad.Except
 import LispError
+import Unpack
+import Data.List
 import Lists
 
 eval :: Value -> ThrowsError Value
@@ -27,31 +27,71 @@ eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
 apply :: String -> [Value] -> ThrowsError Value
 apply func args = maybe
-    (throwError $ NotFunction "Unrecognized primitive function args" func)
+    (throwError $ NotFunction "Unrecognized builtin function args" func)
     ($ args)
-    (lookup func primitives)
+    (lookup func builtins)
 
-primitives :: [(String, [Value] -> ThrowsError Value)]
-primitives = [
-        ("+", numBinop (+)),
-        ("-", numBinop (-)),
-        ("*", numBinop (*)),
+numBuiltins :: [(String, [Value] -> ThrowsError Value)]
+numBuiltins = [
+        ("+", numInfBinop (+) 0),
+        ("-", numInfBinop (-) 0),
+        ("*", numInfBinop (*) 1),
         ("div", numBinop div),
         ("mod", numBinop mod),
         ("quotient", numBinop quot),
-        ("remainder", numBinop rem)
-    ] ++ listPrimitives
+        ("remainder", numBinop rem),
+        ("=", numBoolBinop (==)),
+        (">", numBoolBinop (>)),
+        ("<", numBoolBinop (<)),
+        (">=", numBoolBinop (>=)),
+        ("<=", numBoolBinop (<=)),
+        ("/=", numBoolBinop (/=))
+    ]
+
+boolBuiltins :: [(String, [Value] -> ThrowsError Value)]
+boolBuiltins = [
+        ("&&", boolBoolBinop (&&)),
+        ("||", boolBoolBinop (||))
+    ]
+
+strBuiltins :: [(String, [Value] -> ThrowsError Value)]
+strBuiltins = [
+        ("string=?", strBoolBinop (==)),
+        ("string>?", strBoolBinop (>)),
+        ("string<?", strBoolBinop (<)),
+        ("string>=?", strBoolBinop (>=)),
+        ("string<=?", strBoolBinop (<=))
+    ]
+
+builtins :: [(String, [Value] -> ThrowsError Value)]
+builtins = numBuiltins ++ boolBuiltins ++ strBuiltins ++ listBuiltins
+
+numInfBinop :: (Integer -> Integer -> Integer) -> Integer -> [Value] -> ThrowsError Value
+numInfBinop _ _ [] = throwError $ NumArgs 1 []
+numInfBinop op def [x] = mapM unpackNum [Number def, x] >>= Right . Number . foldl1' op
+numInfBinop op _ params = mapM unpackNum params >>= Right . Number . foldl1' op
 
 numBinop :: (Integer -> Integer -> Integer) -> [Value] -> ThrowsError Value
 numBinop _ [] = throwError $ NumArgs 2 []
-numBinop _ single@[_] = throwError $ NumArgs 2 single
-numBinop op params = mapM unpackNum params >>= Right . Number . foldl1 op
+numBinop op params@[_,_] = mapM unpackNum params >>= Right . Number . foldl1' op
+numBinop _ params = throwError $ NumArgs 2 params
 
-unpackNum :: Value -> ThrowsError Integer 
-unpackNum (Number n) = Right n
-unpackNum (String n) = let parsed = reads n :: [(Integer, String)] in
-                            if null parsed
-                                then throwError $ TypeMismatch "Number" $ String n
-                                else Right $ fst $ head parsed
-unpackNum (List [n]) = unpackNum n
-unpackNum not = throwError $ TypeMismatch "Number" not
+numBoolBinop :: (Integer -> Integer -> Bool) -> [Value] -> ThrowsError Value
+numBoolBinop = boolBinop unpackNum
+
+strBoolBinop :: (String -> String -> Bool) -> [Value] -> ThrowsError Value
+strBoolBinop = boolBinop unpackStr
+
+boolBoolBinop :: (Bool -> Bool -> Bool) -> [Value] -> ThrowsError Value
+boolBoolBinop = boolBinop unpackBool
+
+boolBinop :: (Value -> ThrowsError a) -> (a -> a -> Bool) -> [Value] -> ThrowsError Value
+boolBinop unpack op [x]
+    | Right _ <- unpack x = Right $ Boolean True
+    | Left x <- unpack x = Left x
+boolBinop unpack op [x,y]
+    | Right x <- unpack x
+    , Right y <- unpack y = Right $ Boolean $ op x y
+    | Left x <- unpack x = Left x
+    | Left y <- unpack y = Left y
+boolBinop unpack op params = throwError $ NumArgs 2 params

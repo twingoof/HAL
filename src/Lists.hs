@@ -10,8 +10,8 @@ import Types
 import LispError
 import Control.Monad.Except
 
-listPrimitives :: [(String, [Value] -> ThrowsError Value)]
-listPrimitives = [
+listBuiltins :: [(String, [Value] -> ThrowsError Value)]
+listBuiltins = [
         ("car", car),
         ("cdr", cdr),
         ("cons", cons)
