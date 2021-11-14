@@ -11,9 +11,28 @@ import Control.Monad.Except
 import LispError
 import Unpack
 import Data.List
+import Lists
 
-numPrimitives :: [(String, [Value] -> ThrowsError Value)]
-numPrimitives = [
+eval :: Value -> ThrowsError Value
+eval val@(String _) = Right val
+eval val@(Number _) = Right val
+eval val@(Boolean _) = Right val
+eval cond@(List [Atom "if", pred, conseq, alt])
+    | Right (Boolean False) <- eval pred = eval alt
+    | Right (Boolean True) <- eval pred = eval conseq
+    | otherwise = throwError $ BadSpecialForm "Unrecognized special form" cond
+eval (List [Atom "quote", val]) = Right val
+eval (List (Atom func : args)) = mapM eval args >>= apply func
+eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
+
+apply :: String -> [Value] -> ThrowsError Value
+apply func args = maybe
+    (throwError $ NotFunction "Unrecognized builtin function args" func)
+    ($ args)
+    (lookup func builtins)
+
+numBuiltins :: [(String, [Value] -> ThrowsError Value)]
+numBuiltins = [
         ("+", numInfBinop (+) 0),
         ("-", numInfBinop (-) 0),
         ("*", numInfBinop (*) 1),
@@ -29,14 +48,14 @@ numPrimitives = [
         ("/=", numBoolBinop (/=))
     ]
 
-boolPrimitives :: [(String, [Value] -> ThrowsError Value)]
-boolPrimitives = [
+boolBuiltins :: [(String, [Value] -> ThrowsError Value)]
+boolBuiltins = [
         ("&&", boolBoolBinop (&&)),
         ("||", boolBoolBinop (||))
     ]
 
-strPrimitives :: [(String, [Value] -> ThrowsError Value)]
-strPrimitives = [
+strBuiltins :: [(String, [Value] -> ThrowsError Value)]
+strBuiltins = [
         ("string=?", strBoolBinop (==)),
         ("string>?", strBoolBinop (>)),
         ("string<?", strBoolBinop (<)),
@@ -44,22 +63,8 @@ strPrimitives = [
         ("string<=?", strBoolBinop (<=))
     ]
 
-primitives :: [(String, [Value] -> ThrowsError Value)]
-primitives = numPrimitives ++ boolPrimitives ++ strPrimitives
-
-eval :: Value -> ThrowsError Value
-eval val@(String _) = Right val
-eval val@(Number _) = Right val
-eval val@(Boolean _) = Right val
-eval (List [Atom "quote", val]) = Right val
-eval (List (Atom func : args)) = mapM eval args >>= apply func
-eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
-
-apply :: String -> [Value] -> ThrowsError Value
-apply func args = maybe
-    (throwError $ NotFunction "Unrecognized primitive function args" func)
-    ($ args)
-    (lookup func primitives)
+builtins :: [(String, [Value] -> ThrowsError Value)]
+builtins = numBuiltins ++ boolBuiltins ++ strBuiltins ++ listBuiltins
 
 numInfBinop :: (Integer -> Integer -> Integer) -> Integer -> [Value] -> ThrowsError Value
 numInfBinop _ _ [] = throwError $ NumArgs 1 []
