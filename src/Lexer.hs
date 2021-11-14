@@ -11,6 +11,7 @@ import Data.List (unwords)
 import Control.Exception
 import Control.Monad.Except
 import LispError
+import Lists
 
 eval :: Value -> ThrowsError Value
 eval val@(String _) = Right val
@@ -35,7 +36,7 @@ primitives = [
         ("mod", numBinop mod),
         ("quotient", numBinop quot),
         ("remainder", numBinop rem)
-    ]
+    ] ++ listPrimitives
 
 numBinop :: (Integer -> Integer -> Integer) -> [Value] -> ThrowsError Value
 numBinop _ [] = throwError $ NumArgs 2 []

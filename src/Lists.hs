@@ -10,6 +10,13 @@ import Types
 import LispError
 import Control.Monad.Except
 
+listPrimitives :: [(String, [Value] -> ThrowsError Value)]
+listPrimitives = [
+        ("car", car),
+        ("cdr", cdr),
+        ("cons", cons)
+    ]
+
 car :: [Value] -> ThrowsError Value
 car [List (x:_)] = Right x
 car [Pair (x:_) _] = Right x
