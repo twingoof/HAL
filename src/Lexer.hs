@@ -17,6 +17,10 @@ eval :: Value -> ThrowsError Value
 eval val@(String _) = Right val
 eval val@(Number _) = Right val
 eval val@(Boolean _) = Right val
+eval cond@(List [Atom "if", pred, conseq, alt])
+    | Right (Boolean False) <- eval pred = eval alt
+    | Right (Boolean True) <- eval pred = eval conseq
+    | otherwise = throwError $ BadSpecialForm "Unrecognized special form" cond
 eval (List [Atom "quote", val]) = Right val
 eval (List (Atom func : args)) = mapM eval args >>= apply func
 eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
