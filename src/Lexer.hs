@@ -12,18 +12,29 @@ import LispError
 import Unpack
 import Data.List
 import Lists
+import Environment
+import Debug.Trace
 
-eval :: Value -> ThrowsError Value
-eval val@(String _) = Right val
-eval val@(Number _) = Right val
-eval val@(Boolean _) = Right val
-eval cond@(List [Atom "if", pred, conseq, alt])
-    | Right (Boolean False) <- eval pred = eval alt
-    | Right (Boolean True) <- eval pred = eval conseq
+eval :: Env -> Value -> ThrowsError (Env, Value)
+eval env val@(String _) = Right (env, val)
+eval env val@(Number _) = Right (env, val)
+eval env val@(Boolean _) = Right (env, val)
+eval env (Atom name) = getVar name env
+eval env (List [Atom "quote", val]) = Right (env, val)
+eval env (List [Atom "define", def@(Atom var), form])
+    | Right (envv, val) <- eval env form = Right (setVar var val envv, def)
+    | left <- eval env form = left
+eval env cond@(List [Atom "if", pred, conseq, alt])
+    | Right (envv, Boolean False) <- eval env pred = eval envv alt
+    | Right (envv, Boolean True) <- eval env pred = eval envv conseq
     | otherwise = throwError $ BadSpecialForm "Unrecognized special form" cond
-eval (List [Atom "quote", val]) = Right val
-eval (List (Atom func : args)) = mapM eval args >>= apply func
-eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
+eval env (List (Atom func : args))
+    | Right list <- mapM (eval env) args
+    , Right val <- apply func $ map snd list = Right (env, val)
+    | Right list <- mapM (eval env) args
+    , Left err <- apply func $ map snd list = Left err
+    | Left err <- mapM (eval env) args = Left err
+eval env badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
 apply :: String -> [Value] -> ThrowsError Value
 apply func args = maybe
@@ -88,10 +99,10 @@ boolBoolBinop = boolBinop unpackBool
 boolBinop :: (Value -> ThrowsError a) -> (a -> a -> Bool) -> [Value] -> ThrowsError Value
 boolBinop unpack op [x]
     | Right _ <- unpack x = Right $ Boolean True
-    | Left x <- unpack x = Left x
+    | Left err <- unpack x = Left err
 boolBinop unpack op [x,y]
-    | Right x <- unpack x
-    , Right y <- unpack y = Right $ Boolean $ op x y
-    | Left x <- unpack x = Left x
-    | Left y <- unpack y = Left y
+    | Right a <- unpack x
+    , Right b <- unpack y = Right $ Boolean $ op a b
+    | Left a <- unpack x = Left a
+    | Left b <- unpack y = Left b
 boolBinop unpack op params = throwError $ NumArgs 2 params

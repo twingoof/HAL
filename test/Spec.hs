@@ -10,6 +10,8 @@ import Basic
 import Parser
 import Control.Applicative
 import Types
+import Hal
+import Environment
 
 tests :: Test
 tests = TestList [
@@ -29,7 +31,8 @@ tests = TestList [
     TestLabel "parseQuoted" testParseQuoted,
     TestLabel "parseList" testParseList,
     TestLabel "parseParens" testParseParens,
-    TestLabel "parsePair" testParsePair
+    TestLabel "parsePair" testParsePair,
+    TestLabel "test" Main.test
     ]
 
 --- basic.hs
@@ -132,6 +135,11 @@ testParsePair = TestCase (do
         assertEqual "success" (Right (Pair [Atom "une"] (Atom "string"), "")) (parse parsePair "une . string")
         assertEqual "too many element" (Right (Pair [Atom "une"] (Atom "string"), " . longue")) (parse parsePair "une . string . longue")
         assertEqual "error" (Left (Error "")) (parse parsePair "")
+    )
+
+test :: Test
+test = TestCase (do
+    assertEqual "test" ([], []) (execFiles emptyEnv ["(+ 2 2)", "(+ 4 5)"])
     )
 
 main :: IO ()
