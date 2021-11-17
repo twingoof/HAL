@@ -23,7 +23,7 @@ eval cond@(List [Atom "if", pred, conseq, alt])
     | otherwise = throwError $ BadSpecialForm "Unrecognized special form" cond
 eval (List [Atom "quote", val]) = Right val
 eval (List (Atom func : args)) = mapM eval args >>= apply func
-eval badForm = throwError $ BadSpecialForm "Unrecognized special form prout" badForm
+eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
 apply :: String -> [Value] -> ThrowsError Value
 apply func args = maybe
