@@ -28,13 +28,19 @@ eval env cond@(List [Atom "if", pred, conseq, alt])
     | Right (envv, Boolean False) <- eval env pred = eval envv alt
     | Right (envv, Boolean True) <- eval env pred = eval envv conseq
     | otherwise = throwError $ BadSpecialForm "Unrecognized special form" cond
+eval env cond@(List [Atom "atom?", expr])
+    | Right (envv, List []) <- eval env expr = Right (envv, Boolean True)
+    | Right (envv, List x) <- eval env expr = Right (envv, Boolean False)
+    | Right (envv,_) <- eval env expr = Right (envv, Boolean True)
+    | otherwise = throwError $ BadSpecialForm "Unrecognized special form" cond
 eval env (List (Atom func : args))
     | Right list <- mapM (eval env) args
     , Right val <- apply func $ map snd list = Right (env, val)
     | Right list <- mapM (eval env) args
     , Left err <- apply func $ map snd list = Left err
     | Left err <- mapM (eval env) args = Left err
-eval env badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
+eval env val@(List _) = Right (env, val)
+eval _ badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
 apply :: String -> [Value] -> ThrowsError Value
 apply func args = maybe
@@ -74,8 +80,13 @@ strBuiltins = [
         ("string<=?", strBoolBinop (<=))
     ]
 
+arithBuiltins :: [(String, [Value] -> ThrowsError Value)]
+arithBuiltins = [
+        ("eq?", eq)
+    ]
+
 builtins :: [(String, [Value] -> ThrowsError Value)]
-builtins = numBuiltins ++ boolBuiltins ++ strBuiltins ++ listBuiltins
+builtins = numBuiltins ++ boolBuiltins ++ strBuiltins ++ listBuiltins ++ arithBuiltins
 
 numInfBinop :: (Integer -> Integer -> Integer) -> Integer -> [Value] -> ThrowsError Value
 numInfBinop _ _ [] = throwError $ NumArgs 1 []
@@ -106,3 +117,15 @@ boolBinop unpack op [x,y]
     | Left a <- unpack x = Left a
     | Left b <- unpack y = Left b
 boolBinop unpack op params = throwError $ NumArgs 2 params
+
+eq :: [Value] -> ThrowsError Value
+eq [Boolean arg1, Boolean arg2] = return $ Boolean $ arg1 == arg2
+eq [Number arg1, Number arg2] = return $ Boolean $ arg1 == arg2
+eq [String arg1, String arg2] = return $ Boolean $ arg1 == arg2
+eq [Atom arg1, Atom arg2] = return $ Boolean $ arg1 == arg2
+eq [Pair x xs, Pair y ys] = eq [List $ x ++ [xs], List $ y ++ [ys]]
+eq [List arg1, List arg2]
+    | null arg1 && null arg2 = return $ Boolean True
+    | otherwise = return $ Boolean False
+eq [_, _] = return $ Boolean False
+eq badArgList = throwError $ NumArgs 2 badArgList

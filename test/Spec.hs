@@ -10,6 +10,9 @@ import Basic
 import Parser
 import Control.Applicative
 import Types
+import Lexer
+import LispError
+import Errors
 import Hal
 import Environment
 
@@ -32,7 +35,8 @@ tests = TestList [
     TestLabel "parseList" testParseList,
     TestLabel "parseParens" testParseParens,
     TestLabel "parsePair" testParsePair,
-    TestLabel "test" Main.test
+    --- Lexer.hs
+    TestLabel "atomBuiltins" testAtomBuiltins
     ]
 
 --- basic.hs
@@ -137,9 +141,16 @@ testParsePair = TestCase (do
         assertEqual "error" (Left (Error "")) (parse parsePair "")
     )
 
-test :: Test
-test = TestCase (do
-    assertEqual "test" ([], []) (execFiles emptyEnv ["(+ 2 2)", "(+ 4 5)"])
+--- Lexer.hs
+
+testAtomBuiltins :: Test
+testAtomBuiltins = TestCase (do
+        assertEqual "string atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", String "pouet"]))
+        assertEqual "number atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", Number 667]))
+        assertEqual "boolean false atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", Boolean True]))
+        assertEqual "boolean true atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", Boolean False]))
+        assertEqual "empty list atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", List []]))
+        assertEqual "non empty list atom" (Right (emptyEnv, Boolean False)) (eval emptyEnv (List [Atom "atom?", List [Number 1, Number 2, Number 3]]))
     )
 
 main :: IO ()
