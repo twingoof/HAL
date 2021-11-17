@@ -25,7 +25,7 @@ eval cond@(List [Atom "atom?", expr])
     | Right (Atom _) <- eval expr = Right (Boolean True)
     | Right (List []) <- eval expr = Right (Boolean True)
     | Right _ <- eval expr = Right (Boolean False)
-    | otherwise = throwError $ BadSpecialForm "Unrecognized  special form" cond
+    | otherwise = throwError $ BadSpecialForm "Unrecognized special form" cond
 eval (List [Atom "quote", val]) = Right val
 eval (List (Atom func : args)) = mapM eval args >>= apply func
 eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
