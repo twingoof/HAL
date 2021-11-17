@@ -63,13 +63,13 @@ strBuiltins = [
         ("string<=?", strBoolBinop (<=))
     ]
 
-basicBuiltins :: [(String, [Value] -> ThrowsError Value)]
-basicBuiltins = [
+arithBuiltins :: [(String, [Value] -> ThrowsError Value)]
+arithBuiltins = [
         ("eq?", eq)
     ]
 
 builtins :: [(String, [Value] -> ThrowsError Value)]
-builtins = numBuiltins ++ boolBuiltins ++ strBuiltins ++ listBuiltins
+builtins = numBuiltins ++ boolBuiltins ++ strBuiltins ++ listBuiltins ++ arithBuiltins
 
 numInfBinop :: (Integer -> Integer -> Integer) -> Integer -> [Value] -> ThrowsError Value
 numInfBinop _ _ [] = throwError $ NumArgs 1 []
@@ -107,10 +107,8 @@ eq [Number arg1, Number arg2] = return $ Boolean $ arg1 == arg2
 eq [String arg1, String arg2] = return $ Boolean $ arg1 == arg2
 eq [Atom arg1, Atom arg2] = return $ Boolean $ arg1 == arg2
 eq [Pair x xs, Pair y ys] = eq [List $ x ++ [xs], List $ y ++ [ys]]
-eq [List arg1, List arg2]             = return $ Boolean $ (length arg1 == length arg2) &&
-                                                             all eqPair (zip arg1 arg2)
-     where eqPair (x1, x2) = case eq [x1, x2] of
-                                Right (Boolean val) -> val
-                                Left err -> False
+eq [List arg1, List arg2]
+    | null arg1 && null arg2 = return $ Boolean True
+    | otherwise = return $ Boolean False
 eq [_, _] = return $ Boolean False
 eq badArgList = throwError $ NumArgs 2 badArgList
