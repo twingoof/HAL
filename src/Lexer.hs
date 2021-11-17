@@ -23,7 +23,7 @@ eval cond@(List [Atom "if", pred, conseq, alt])
     | otherwise = throwError $ BadSpecialForm "Unrecognized special form" cond
 eval (List [Atom "quote", val]) = Right val
 eval (List (Atom func : args)) = mapM eval args >>= apply func
-eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
+eval badForm = throwError $ BadSpecialForm "Unrecognized special form prout" badForm
 
 apply :: String -> [Value] -> ThrowsError Value
 apply func args = maybe
@@ -63,6 +63,11 @@ strBuiltins = [
         ("string<=?", strBoolBinop (<=))
     ]
 
+basicBuiltins :: [(String, [Value] -> ThrowsError Value)]
+basicBuiltins = [
+        ("eq?", eq)
+    ]
+
 builtins :: [(String, [Value] -> ThrowsError Value)]
 builtins = numBuiltins ++ boolBuiltins ++ strBuiltins ++ listBuiltins
 
@@ -95,3 +100,17 @@ boolBinop unpack op [x,y]
     | Left x <- unpack x = Left x
     | Left y <- unpack y = Left y
 boolBinop unpack op params = throwError $ NumArgs 2 params
+
+eq :: [Value] -> ThrowsError Value
+eq [Boolean arg1, Boolean arg2] = return $ Boolean $ arg1 == arg2
+eq [Number arg1, Number arg2] = return $ Boolean $ arg1 == arg2
+eq [String arg1, String arg2] = return $ Boolean $ arg1 == arg2
+eq [Atom arg1, Atom arg2] = return $ Boolean $ arg1 == arg2
+eq [Pair x xs, Pair y ys] = eq [List $ x ++ [xs], List $ y ++ [ys]]
+eq [List arg1, List arg2]             = return $ Boolean $ (length arg1 == length arg2) &&
+                                                             all eqPair (zip arg1 arg2)
+     where eqPair (x1, x2) = case eq [x1, x2] of
+                                Right (Boolean val) -> val
+                                Left err -> False
+eq [_, _] = return $ Boolean False
+eq badArgList = throwError $ NumArgs 2 badArgList
