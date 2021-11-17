@@ -21,6 +21,7 @@ data Error = NumArgs Integer [Value]
     | NotFunction String String
     | UnboundVar String String
     | Empty
+    deriving (Eq)
 
 instance Show Error where show = showError
 

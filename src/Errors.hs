@@ -13,7 +13,7 @@ import System.Exit
 data HalException =
     InvalidPath |
     LispException String
-    deriving Show
+    deriving (Show, Eq)
 
 instance Exception HalException
 
