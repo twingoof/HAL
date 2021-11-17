@@ -10,6 +10,10 @@ import Basic
 import Parser
 import Control.Applicative
 import Types
+import Lexer
+import LispError
+import Errors
+import Hal (readExpr)
 
 tests :: Test
 tests = TestList [
@@ -29,7 +33,9 @@ tests = TestList [
     TestLabel "parseQuoted" testParseQuoted,
     TestLabel "parseList" testParseList,
     TestLabel "parseParens" testParseParens,
-    TestLabel "parsePair" testParsePair
+    TestLabel "parsePair" testParsePair,
+    --- Lexer.hs
+    TestLabel "atomBuiltins" testAtomBuiltins
     ]
 
 --- basic.hs
@@ -132,6 +138,18 @@ testParsePair = TestCase (do
         assertEqual "success" (Right (Pair [Atom "une"] (Atom "string"), "")) (parse parsePair "une . string")
         assertEqual "too many element" (Right (Pair [Atom "une"] (Atom "string"), " . longue")) (parse parsePair "une . string . longue")
         assertEqual "error" (Left (Error "")) (parse parsePair "")
+    )
+
+--- Lexer.hs
+
+testAtomBuiltins :: Test
+testAtomBuiltins = TestCase (do
+        assertEqual "string atom" (Right (Boolean True)) (eval (List [Atom "atom?", String "pouet"]))
+        assertEqual "number atom" (Right (Boolean True)) (eval (List [Atom "atom?", Number 667]))
+        assertEqual "boolean false atom" (Right (Boolean True)) (eval (List [Atom "atom?", Boolean True]))
+        assertEqual "boolean true atom" (Right (Boolean True)) (eval (List [Atom "atom?", Boolean False]))
+        assertEqual "empty list atom" (Right (Boolean True)) (eval (List [Atom "atom?", List []]))
+        assertEqual "non empty list atom" (Right (Boolean False)) (eval (List [Atom "atom?", List [Number 1, Number 2, Number 3]]))
     )
 
 main :: IO ()
