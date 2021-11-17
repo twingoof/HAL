@@ -12,7 +12,6 @@ import LispError
 import Unpack
 import Data.List
 import Lists
-import Foreign.C.Error (throwErrno)
 
 eval :: Value -> ThrowsError Value
 eval val@(String _) = Right val
