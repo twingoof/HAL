@@ -166,9 +166,6 @@ parseQuoted = Parser funcParseQuoted
 
 funcParseList :: Data Value
 funcParseList [] = Left (Error [])
-funcParseList (x:str@(')':xs))
-    | Right (a, []) <- parse parseExpr [x] =
-        Right (List [a], str)
 funcParseList str@(')':xs) = Right (List [], str)
 funcParseList str
     | Right (a, x) <- parse (sepBy parseExpr spaces) str =
