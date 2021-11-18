@@ -14,6 +14,10 @@ import Lists
 import Debug.Trace
 import Data.Maybe
 
+argEnv :: [(Env, Value)] -> Env -> Env
+argEnv [] env = env
+argEnv list _ = fst $ last list
+
 eval :: Env -> Value -> ThrowsError (Env, Value)
 eval env val@(String _) = Right (env, val)
 eval env val@(Number _) = Right (env, val)
@@ -24,15 +28,15 @@ eval env (List [Atom "define", def@(Atom var), form])
     | Right (envv, val) <- eval env form = Right (setVar var val envv, def)
     | left <- eval env form = left
 eval env (List (Atom "define":List (def@(Atom var):params):body)) =
-    Right (setVar var (makeNormalFunc params body) env, def)
+    Right (setVar var (makeNormalFunc env params body) env, def)
 eval env (List (Atom "define":Pair (def@(Atom var):params) vaargs:body)) =
-    Right (setVar var (makeVaargs vaargs params body) env, def)
+    Right (setVar var (makeVaargs vaargs env params body) env, def)
 eval env (List (Atom "lambda":List params:body)) =
-    Right (env, makeNormalFunc params body)
+    Right (env, makeNormalFunc env params body)
 eval env (List (Atom "lambda":Pair params vaargs:body)) =
-    Right (env, makeVaargs vaargs params body)
+    Right (env, makeVaargs vaargs env params body)
 eval env (List (Atom "lambda":vaargs@(Atom _):body)) =
-    Right (env, makeVaargs vaargs [] body)
+    Right (env, makeVaargs vaargs env [] body)
 eval env cond@(List [Atom "if", pred, conseq, alt])
     | Right (envv, Boolean False) <- eval env pred = eval envv alt
     | Right (envv, Boolean True) <- eval env pred = eval envv conseq
@@ -42,17 +46,17 @@ eval env cond@(List [Atom "atom?", expr])
     | Right (envv, List x) <- eval env expr = Right (envv, Boolean False)
     | Right (envv,_) <- eval env expr = Right (envv, Boolean True)
     | otherwise = throwError $ BadSpecialForm "Unrecognized special form" cond
-eval env (List (func@(Atom _):args))
+eval env (List (func:args))
     | Right (envv, func) <- eval env func
     , Right tab <- mapM (eval envv) args
-    , Right val <- apply func (map snd tab) envv =
+    , Right val <- apply func (map snd tab) $ argEnv tab envv =
         Right (fst $ last tab, val)
     | Right (envv, func) <- eval env func
-    , Right tab <- mapM (eval env) args
-    , Left err <- apply func (map snd tab) envv =
+    , Right tab <- mapM (eval envv) args
+    , Left err <- apply func (map snd tab) $ argEnv tab envv =
         throwError err
     | Right (envv, func) <- eval env func
-    , Left err <- mapM (eval env) args =
+    , Left err <- mapM (eval envv) args =
         throwError err
     | Left err <- eval env func =
         throwError err
@@ -61,14 +65,15 @@ eval _ badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
 apply :: Value -> [Value] -> Env -> ThrowsError Value
 apply (Builtin func) args _ = func args
-apply (Func params vaargs body) args closure
-    | length params /= length args && isNothing vaargs = throwError $ NumArgs (toInteger $ length params) args
+apply (Func params vaargs body closure) args env
+    | length params /= length args && isNothing vaargs =
+        throwError $ NumArgs (toInteger $ length params) args
     | otherwise = do
-        let env = bindVars (zip params args) closure
-        let envv = case vaargs of
-                Nothing -> env
-                Just name -> setVar name (List $ drop (length params) args) env
-        case last <$> mapM (eval envv) body of
+        let envv = bindVars (zip params args) $ concatEnv closure env
+        let envvv = case vaargs of
+                Nothing -> envv
+                Just name -> setVar name (List $ drop (length params) args) envv
+        case last <$> mapM (eval envvv) body of
             Right (_, res) -> Right res
             Left err -> throwError err
 apply err _ _ = throwError $ NotFunction "Unrecognized special form" $ show err
@@ -147,13 +152,13 @@ boolBinop unpack op [x,y]
     | Left b <- unpack y = Left b
 boolBinop unpack op params = throwError $ NumArgs 2 params
 
-makeFunc :: Maybe String -> [Value] -> [Value] -> Value
-makeFunc vaargs params = Func (map showVal params) vaargs
+makeFunc :: Maybe String -> Env -> [Value] -> [Value] -> Value
+makeFunc varargs env params body = Func (map showVal params) varargs body env
 
-makeNormalFunc :: [Value] -> [Value] -> Value
+makeNormalFunc :: Env -> [Value] -> [Value] -> Value
 makeNormalFunc = makeFunc Nothing
 
-makeVaargs :: Value -> [Value] -> [Value] -> Value
+makeVaargs :: Value -> Env -> [Value] -> [Value] -> Value
 makeVaargs = makeFunc . Just . showVal
 
 eq :: [Value] -> ThrowsError Value

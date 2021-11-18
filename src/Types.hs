@@ -64,6 +64,12 @@ bindVars :: [(String, Value)] -> Env -> Env
 bindVars [] env = env
 bindVars ((x,y):xs) env = bindVars xs $ setVar x y env
 
+concatEnv :: Env -> Env -> Env
+concatEnv [] to = to
+concatEnv (val@(x,y):xs) to
+    | Just _ <- lookup x to = to
+    | otherwise = val : concatEnv xs to
+
 data Value =
     Number Integer | Boolean Bool | String String |
     List [Value] | Pair [Value] Value | Atom String |
@@ -71,7 +77,8 @@ data Value =
     Func {
         params :: [String],
         vaargs :: Maybe String,
-        body :: [Value]
+        body :: [Value],
+        closure :: Env
     }
 
 instance Eq Value where x == y = eqValue x y
@@ -101,7 +108,7 @@ showVal Func {params = args, vaargs = vaargs, body = body} =
     (case vaargs of
          Nothing -> ""
          Just arg -> " . " ++ arg)
-    ++ ") ...)"
+    ++ ") " ++ unwords (map show body) ++ ")"
 
 unwordList :: [Value] -> String
 unwordList = unwords . map showVal
@@ -159,6 +166,9 @@ parseQuoted = Parser funcParseQuoted
 
 funcParseList :: Data Value
 funcParseList [] = Left (Error [])
+funcParseList (x:str@(')':xs))
+    | Right (a, []) <- parse parseExpr [x] =
+        Right (List [a], str)
 funcParseList str@(')':xs) = Right (List [], str)
 funcParseList str
     | Right (a, x) <- parse (sepBy parseExpr spaces) str =
@@ -182,9 +192,9 @@ funcParseParens :: Data Value
 funcParseParens [] = Left (Error [])
 funcParseParens str
     | Right (c1, x) <- parse (char '(') str
-    , Right (x, y) <- parse (parsePair <|> parseList) x
+    , Right (val, y) <- parse (parsePair <|> parseList) x
     , Right (c2, z) <- parse (char ')') y =
-        Right (x, z)
+        Right (val, z)
     | otherwise = Left (Error str)
 
 parseParens :: Parser Value
