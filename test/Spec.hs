@@ -11,10 +11,8 @@ import Parser
 import Control.Applicative
 import Types
 import Lexer
-import LispError
 import Errors
 import Hal
-import Environment
 
 tests :: Test
 tests = TestList [

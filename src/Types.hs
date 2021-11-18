@@ -10,11 +10,81 @@ module Types where
 import Parser
 import Basic
 import Control.Applicative
+import Control.Monad.Except
+import Control.Exception
+import Errors
+
+type ThrowsError = Either Error
+
+data Error = NumArgs Integer [Value]
+    | TypeMismatch String Value
+    | Parsing ParserError
+    | BadSpecialForm String Value
+    | NotFunction String String
+    | UnboundVar String String
+    | Empty
+    deriving (Eq)
+
+instance Show Error where show = showError
+
+showError :: Error -> String
+showError (NumArgs expected found) = "Expected " ++ show expected ++ " args; found values " ++ unwordList found
+showError (TypeMismatch expected found) = "Invalid type: expected " ++ expected ++ ", found " ++ show found
+showError (Parsing (Error err)) = "Parse error at " ++ err
+showError (BadSpecialForm str val) = str ++ ": " ++ show val
+showError (NotFunction str func)    = str ++ ": " ++ func
+showError (UnboundVar str val)  = str ++ ": " ++ val
+showError _ = []
+
+trapError :: (MonadError a m, Show a) => Bool -> m String -> m String
+trapError False action = action `catchError` (return . show)
+trapError True action = action `catchError` (throw . LispException . show)
+
+extractValue :: ThrowsError a -> a
+extractValue (Right val) = val
+extractValue (Left err) = throw $ LispException ""
+
+type Env = [(String, Value)]
+
+emptyEnv :: Env
+emptyEnv = []
+
+getVar :: String -> Env -> ThrowsError (Env, Value)
+getVar name env
+    | Just val <- lookup name env = Right (env, val)
+    | otherwise = throwError $ UnboundVar "Getting an unbound variable" name
+
+deleteVar :: String -> Env -> Env
+deleteVar name = filter (\(x,y) -> x /= name)
+
+setVar :: String -> Value -> Env -> Env
+setVar name value env = (name, value) : deleteVar name env
+
+bindVars :: [(String, Value)] -> Env -> Env
+bindVars [] env = env
+bindVars ((x,y):xs) env = bindVars xs $ setVar x y env
 
 data Value =
     Number Integer | Boolean Bool | String String |
-    List [Value] | Pair [Value] Value | Atom String
-    deriving (Eq)
+    List [Value] | Pair [Value] Value | Atom String |
+    Builtin ([Value] -> ThrowsError Value) |
+    Func {
+        params :: [String],
+        vaargs :: Maybe String,
+        body :: [Value],
+        closure :: Env
+    }
+
+instance Eq Value where x == y = eqValue x y
+
+eqValue :: Value -> Value -> Bool
+eqValue (Number x) (Number y) = x == y
+eqValue (Boolean x) (Boolean y) = x == y
+eqValue (String x) (String y) = x == y
+eqValue (List x) (List y) = x == y
+eqValue (Pair x xx) (Pair y yy) = x == y && xx == yy
+eqValue (Atom x) (Atom y) = x == y
+eqValue _ _ = False
 
 instance Show Value where show = showVal
 
@@ -26,6 +96,13 @@ showVal (Boolean True) = "#t"
 showVal (Boolean False) = "#f"
 showVal (List list) = "(" ++ unwordList list ++ ")"
 showVal (Pair head tail) = "(" ++ unwordList head ++ " . " ++ showVal tail ++ ")"
+showVal (Builtin _) = "#<procedure>"
+showVal Func {params = args, vaargs = vaargs, body = body, closure = env} =
+   "(lambda (" ++ unwords (map show args) ++
+    (case vaargs of
+         Nothing -> ""
+         Just arg -> " . " ++ arg)
+    ++ ") ...)"
 
 unwordList :: [Value] -> String
 unwordList = unwords . map showVal
