@@ -18,6 +18,12 @@ argEnv :: [(Env, Value)] -> Env -> Env
 argEnv [] env = env
 argEnv list _ = fst $ last list
 
+letPair :: [Value] -> ThrowsError [(Value, Value)]
+letPair [] = Right []
+letPair (List [x,y]:xs)
+    | Right arr <- letPair xs = Right $ (x,y) : arr
+letPair val = throwError $ BadSpecialForm "Unrecognized special form" $ List val
+
 eval :: Env -> Value -> ThrowsError (Env, Value)
 eval env val@(String _) = Right (env, val)
 eval env val@(Number _) = Right (env, val)
@@ -37,6 +43,10 @@ eval env (List (Atom "lambda":Pair params vaargs:body)) =
     Right (env, makeVaargs vaargs env params body)
 eval env (List (Atom "lambda":vaargs@(Atom _):body)) =
     Right (env, makeVaargs vaargs env [] body)
+eval env cond@(List (Atom "let":List params:body))
+    | Right arr <- letPair params =
+        eval env (List $ List (Atom "lambda" : List (map fst arr) : body) : map snd arr)
+    | otherwise = throwError $ BadSpecialForm "Unrecognized special form" cond
 eval env cond@(List [Atom "if", pred, conseq, alt])
     | Right (envv, Boolean False) <- eval env pred = eval envv alt
     | Right (envv, Boolean True) <- eval env pred = eval envv conseq
