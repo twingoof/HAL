@@ -73,9 +73,9 @@ letter = Parser funcLetter
 funcSepBy :: Parser a -> Parser b -> Data [a]
 funcSepBy _ _ [] = Left (Error [])
 funcSepBy p1 p2 str
-    | Right (a, str) <- parse p1 str
-    , Right (b, str) <- parse (many (p2 >> p1)) str =
-        Right (a:b, str)
+    | Right (a, x) <- parse p1 str
+    , Right (b, y) <- parse (many (p2 >> p1)) x =
+        Right (a:b, y)
     | otherwise = Left (Error str)
 
 sepBy :: Parser a -> Parser b -> Parser [a]
@@ -84,10 +84,10 @@ sepBy p1 p2 = Parser (funcSepBy p1 p2)
 funcEndBy :: Parser a -> Parser b -> Data a
 funcEndBy _ _ [] = Left (Error [])
 funcEndBy p1 p2 str
-    | Right (a, str) <- parse p1 str
-    , Right (_, str) <- parse p2 str =
-        Right (a, str)
+    | Right (a, x) <- parse p1 str
+    , Right (_, y) <- parse p2 x =
+        Right (a, y)
     | otherwise = Left (Error str)
 
 endBy :: Parser a -> Parser b -> Parser [a]
-endBy p1 p2 = many (Parser (funcEndBy p1 p2))
+endBy p1 p2 = many $ Parser (funcEndBy p1 p2)

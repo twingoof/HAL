@@ -13,7 +13,8 @@ import Types
 import Lexer
 import LispError
 import Errors
-import Hal (readExpr)
+import Hal
+import Environment
 
 tests :: Test
 tests = TestList [
@@ -144,12 +145,12 @@ testParsePair = TestCase (do
 
 testAtomBuiltins :: Test
 testAtomBuiltins = TestCase (do
-        assertEqual "string atom" (Right (Boolean True)) (eval (List [Atom "atom?", String "pouet"]))
-        assertEqual "number atom" (Right (Boolean True)) (eval (List [Atom "atom?", Number 667]))
-        assertEqual "boolean false atom" (Right (Boolean True)) (eval (List [Atom "atom?", Boolean True]))
-        assertEqual "boolean true atom" (Right (Boolean True)) (eval (List [Atom "atom?", Boolean False]))
-        assertEqual "empty list atom" (Right (Boolean True)) (eval (List [Atom "atom?", List []]))
-        assertEqual "non empty list atom" (Right (Boolean False)) (eval (List [Atom "atom?", List [Number 1, Number 2, Number 3]]))
+        assertEqual "string atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", String "pouet"]))
+        assertEqual "number atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", Number 667]))
+        assertEqual "boolean false atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", Boolean True]))
+        assertEqual "boolean true atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", Boolean False]))
+        assertEqual "empty list atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", List []]))
+        assertEqual "non empty list atom" (Right (emptyEnv, Boolean False)) (eval emptyEnv (List [Atom "atom?", List [Number 1, Number 2, Number 3]]))
     )
 
 main :: IO ()
