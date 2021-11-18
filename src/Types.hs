@@ -71,8 +71,7 @@ data Value =
     Func {
         params :: [String],
         vaargs :: Maybe String,
-        body :: [Value],
-        closure :: Env
+        body :: [Value]
     }
 
 instance Eq Value where x == y = eqValue x y
@@ -97,7 +96,7 @@ showVal (Boolean False) = "#f"
 showVal (List list) = "(" ++ unwordList list ++ ")"
 showVal (Pair head tail) = "(" ++ unwordList head ++ " . " ++ showVal tail ++ ")"
 showVal (Builtin _) = "#<procedure>"
-showVal Func {params = args, vaargs = vaargs, body = body, closure = env} =
+showVal Func {params = args, vaargs = vaargs, body = body} =
    "(lambda (" ++ unwords (map show args) ++
     (case vaargs of
          Nothing -> ""

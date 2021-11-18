@@ -24,15 +24,15 @@ eval env (List [Atom "define", def@(Atom var), form])
     | Right (envv, val) <- eval env form = Right (setVar var val envv, def)
     | left <- eval env form = left
 eval env (List (Atom "define":List (def@(Atom var):params):body)) =
-    Right (setVar var (makeNormalFunc env params body) env, def)
+    Right (setVar var (makeNormalFunc params body) env, def)
 eval env (List (Atom "define":Pair (def@(Atom var):params) vaargs:body)) =
-    Right (setVar var (makeVaargs vaargs env params body) env, def)
+    Right (setVar var (makeVaargs vaargs params body) env, def)
 eval env (List (Atom "lambda":List params:body)) =
-    Right (env, makeNormalFunc env params body)
+    Right (env, makeNormalFunc params body)
 eval env (List (Atom "lambda":Pair params vaargs:body)) =
-    Right (env, makeVaargs vaargs env params body)
+    Right (env, makeVaargs vaargs params body)
 eval env (List (Atom "lambda":vaargs@(Atom _):body)) =
-    Right (env, makeVaargs vaargs env [] body)
+    Right (env, makeVaargs vaargs [] body)
 eval env cond@(List [Atom "if", pred, conseq, alt])
     | Right (envv, Boolean False) <- eval env pred = eval envv alt
     | Right (envv, Boolean True) <- eval env pred = eval envv conseq
@@ -42,26 +42,26 @@ eval env cond@(List [Atom "atom?", expr])
     | Right (envv, List x) <- eval env expr = Right (envv, Boolean False)
     | Right (envv,_) <- eval env expr = Right (envv, Boolean True)
     | otherwise = throwError $ BadSpecialForm "Unrecognized special form" cond
-eval env (List (func:args))
+eval env (List (func@(Atom _):args))
     | Right (envv, func) <- eval env func
-    , Right tab <- mapM (eval env) args
-    , Right val <- apply func (map snd tab) =
+    , Right tab <- mapM (eval envv) args
+    , Right val <- apply func (map snd tab) envv =
         Right (fst $ last tab, val)
     | Right (envv, func) <- eval env func
     , Right tab <- mapM (eval env) args
-    , Left err <- apply func (map snd tab) =
+    , Left err <- apply func (map snd tab) envv =
         throwError err
     | Right (envv, func) <- eval env func
     , Left err <- mapM (eval env) args =
         throwError err
-    | Left err <- eval env func = 
+    | Left err <- eval env func =
         throwError err
 eval env val@(List _) = Right (env, val)
 eval _ badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
-apply :: Value -> [Value] -> ThrowsError Value
-apply (Builtin func) args = func args
-apply (Func params vaargs body closure) args
+apply :: Value -> [Value] -> Env -> ThrowsError Value
+apply (Builtin func) args _ = func args
+apply (Func params vaargs body) args closure
     | length params /= length args && isNothing vaargs = throwError $ NumArgs (toInteger $ length params) args
     | otherwise = do
         let env = bindVars (zip params args) closure
@@ -71,7 +71,7 @@ apply (Func params vaargs body closure) args
         case last <$> mapM (eval envv) body of
             Right (_, res) -> Right res
             Left err -> throwError err
-apply err _ = throwError $ NotFunction "Unrecognized special form" $ show err
+apply err _ _ = throwError $ NotFunction "Unrecognized special form" $ show err
 
 numBuiltins :: [(String, [Value] -> ThrowsError Value)]
 numBuiltins = [
@@ -147,13 +147,13 @@ boolBinop unpack op [x,y]
     | Left b <- unpack y = Left b
 boolBinop unpack op params = throwError $ NumArgs 2 params
 
-makeFunc :: Maybe String -> Env -> [Value] -> [Value] -> Value
-makeFunc vaargs env params body = Func (map showVal params) vaargs body env
+makeFunc :: Maybe String -> [Value] -> [Value] -> Value
+makeFunc vaargs params = Func (map showVal params) vaargs
 
-makeNormalFunc :: Env -> [Value] -> [Value] -> Value
+makeNormalFunc :: [Value] -> [Value] -> Value
 makeNormalFunc = makeFunc Nothing
 
-makeVaargs :: Value -> Env -> [Value] -> [Value] -> Value
+makeVaargs :: Value -> [Value] -> [Value] -> Value
 makeVaargs = makeFunc . Just . showVal
 
 eq :: [Value] -> ThrowsError Value
