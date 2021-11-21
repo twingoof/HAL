@@ -8,12 +8,15 @@
 module Lexer where
 import Types
 import Control.Monad.Except
-import LispError
 import Unpack
 import Data.List
 import Lists
-import Environment
 import Debug.Trace
+import Data.Maybe
+
+argEnv :: [(Env, Value)] -> Env -> Env
+argEnv [] env = env
+argEnv list _ = fst $ last list
 
 eval :: Env -> Value -> ThrowsError (Env, Value)
 eval env val@(String _) = Right (env, val)
@@ -24,6 +27,16 @@ eval env (List [Atom "quote", val]) = Right (env, val)
 eval env (List [Atom "define", def@(Atom var), form])
     | Right (envv, val) <- eval env form = Right (setVar var val envv, def)
     | left <- eval env form = left
+eval env (List (Atom "define":List (def@(Atom var):params):body)) =
+    Right (setVar var (makeNormalFunc env params body) env, def)
+eval env (List (Atom "define":Pair (def@(Atom var):params) vaargs:body)) =
+    Right (setVar var (makeVaargs vaargs env params body) env, def)
+eval env (List (Atom "lambda":List params:body)) =
+    Right (env, makeNormalFunc env params body)
+eval env (List (Atom "lambda":Pair params vaargs:body)) =
+    Right (env, makeVaargs vaargs env params body)
+eval env (List (Atom "lambda":vaargs@(Atom _):body)) =
+    Right (env, makeVaargs vaargs env [] body)
 eval env cond@(List [Atom "if", pred, conseq, alt])
     | Right (envv, Boolean False) <- eval env pred = eval envv alt
     | Right (envv, Boolean True) <- eval env pred = eval envv conseq
@@ -33,20 +46,36 @@ eval env cond@(List [Atom "atom?", expr])
     | Right (envv, List x) <- eval env expr = Right (envv, Boolean False)
     | Right (envv,_) <- eval env expr = Right (envv, Boolean True)
     | otherwise = throwError $ BadSpecialForm "Unrecognized special form" cond
-eval env (List (Atom func : args))
-    | Right list <- mapM (eval env) args
-    , Right val <- apply func $ map snd list = Right (env, val)
-    | Right list <- mapM (eval env) args
-    , Left err <- apply func $ map snd list = Left err
-    | Left err <- mapM (eval env) args = Left err
-eval env val@(List _) = Right (env, val)
+eval env (List (func:args))
+    | Right (envv, func) <- eval env func
+    , Right tab <- mapM (eval envv) args
+    , Right val <- apply func (map snd tab) $ argEnv tab envv =
+        Right (fst $ last tab, val)
+    | Right (envv, func) <- eval env func
+    , Right tab <- mapM (eval envv) args
+    , Left err <- apply func (map snd tab) $ argEnv tab envv =
+        throwError err
+    | Right (envv, func) <- eval env func
+    , Left err <- mapM (eval envv) args =
+        throwError err
+    | Left err <- eval env func =
+        throwError err
 eval _ badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
-apply :: String -> [Value] -> ThrowsError Value
-apply func args = maybe
-    (throwError $ NotFunction "Unrecognized builtin function args" func)
-    ($ args)
-    (lookup func builtins)
+apply :: Value -> [Value] -> Env -> ThrowsError Value
+apply (Builtin func) args _ = func args
+apply (Func params vaargs body closure) args env
+    | length params /= length args && isNothing vaargs =
+        throwError $ NumArgs (toInteger $ length params) args
+    | otherwise = do
+        let envv = bindVars (zip params args) $ concatEnv closure env
+        let envvv = case vaargs of
+                Nothing -> envv
+                Just name -> setVar name (List $ drop (length params) args) envv
+        case last <$> mapM (eval envvv) body of
+            Right (_, res) -> Right res
+            Left err -> throwError err
+apply err _ _ = throwError $ NotFunction "Unrecognized special form" $ show err
 
 numBuiltins :: [(String, [Value] -> ThrowsError Value)]
 numBuiltins = [
@@ -85,6 +114,10 @@ arithBuiltins = [
         ("eq?", eq)
     ]
 
+builtinEnv :: Env
+builtinEnv = bindVars (map make builtins) emptyEnv
+    where make (var, func) = (var, Builtin func)
+
 builtins :: [(String, [Value] -> ThrowsError Value)]
 builtins = numBuiltins ++ boolBuiltins ++ strBuiltins ++ listBuiltins ++ arithBuiltins
 
@@ -117,6 +150,15 @@ boolBinop unpack op [x,y]
     | Left a <- unpack x = Left a
     | Left b <- unpack y = Left b
 boolBinop unpack op params = throwError $ NumArgs 2 params
+
+makeFunc :: Maybe String -> Env -> [Value] -> [Value] -> Value
+makeFunc varargs env params body = Func (map showVal params) varargs body env
+
+makeNormalFunc :: Env -> [Value] -> [Value] -> Value
+makeNormalFunc = makeFunc Nothing
+
+makeVaargs :: Value -> Env -> [Value] -> [Value] -> Value
+makeVaargs = makeFunc . Just . showVal
 
 eq :: [Value] -> ThrowsError Value
 eq [Boolean arg1, Boolean arg2] = return $ Boolean $ arg1 == arg2

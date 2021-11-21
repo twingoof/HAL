@@ -14,10 +14,8 @@ import Basic
 import Types
 import Lexer
 import Control.Monad.Except
-import LispError
 import Errors
 import Control.Exception
-import Environment
 
 readExpr :: String -> ThrowsError Value
 readExpr [] = throwError Empty
@@ -66,13 +64,13 @@ openFiles env (x:xs) = do
     pure (envvv, result ++ recurse)
 
 hal :: Bool -> [String] -> IO ()
-hal _ [] = interactive emptyEnv
+hal _ [] = interactive builtinEnv
 hal False args = do
-    (env, result) <- openFiles emptyEnv args
+    (env, result) <- openFiles builtinEnv args
     let filtered = filter (not . null) result
     if null filtered
         then pure ()
         else putStrLn $ last filtered
 hal True args = do
-    (env, _) <- openFiles emptyEnv args
+    (env, _) <- openFiles builtinEnv args
     interactive env

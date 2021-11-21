@@ -76,6 +76,8 @@ funcSepBy p1 p2 str
     | Right (a, x) <- parse p1 str
     , Right (b, y) <- parse (many (p2 >> p1)) x =
         Right (a:b, y)
+    | Right (a, x) <- parse p1 str =
+        Right ([a], x)
     | otherwise = Left (Error str)
 
 sepBy :: Parser a -> Parser b -> Parser [a]

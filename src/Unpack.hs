@@ -7,7 +7,6 @@
 
 module Unpack where
 import Types
-import LispError
 import Control.Monad.Except
 
 unpackNum :: Value -> ThrowsError Integer 
