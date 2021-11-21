@@ -60,7 +60,6 @@ eval env (List (func:args))
         throwError err
     | Left err <- eval env func =
         throwError err
-eval env val@(List _) = Right (env, val)
 eval _ badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
 apply :: Value -> [Value] -> Env -> ThrowsError Value
