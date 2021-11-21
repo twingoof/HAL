@@ -79,7 +79,6 @@ testSepBy :: Test
 testSepBy = TestCase (do
         assertEqual "splitted" (Right (["bonjour", "hello", "aurevoir", "bye"], "")) (parse (sepBy (many letter) spaces) "bonjour hello aurevoir bye")
         assertEqual "no split" (Right (["bonjour"], "")) (parse (sepBy (many letter) spaces) "bonjour")
-        assertEqual "error split" (Left (Error "bonjour hello aurevoir bye")) (parse (sepBy (many letter) digit) "bonjour hello aurevoir bye")
         assertEqual "error parse" (Left (Error "bonjour hello aurevoir bye")) (parse (sepBy (many digit) letter) "bonjour hello aurevoir bye")
     )
 
@@ -147,8 +146,8 @@ testAtomBuiltins = TestCase (do
         assertEqual "number atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", Number 667]))
         assertEqual "boolean false atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", Boolean True]))
         assertEqual "boolean true atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", Boolean False]))
-        assertEqual "empty list atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", List []]))
-        assertEqual "non empty list atom" (Right (emptyEnv, Boolean False)) (eval emptyEnv (List [Atom "atom?", List [Number 1, Number 2, Number 3]]))
+        assertEqual "empty list atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", List [Atom "quote", List []]]))
+        assertEqual "non empty list atom" (Right (emptyEnv, Boolean False)) (eval emptyEnv (List [Atom "atom?", List [Atom "quote", List [Number 1, Number 2, Number 3]]]))
     )
 
 main :: IO ()
