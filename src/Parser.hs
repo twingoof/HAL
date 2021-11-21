@@ -69,8 +69,8 @@ alternativeParser :: Parser a -> Parser a -> Data a
 alternativeParser _ _ [] = Left (Error [])
 alternativeParser p1 p2 str
     | Left _ <- parse p1 str
-    , Left (Error err) <- parse p2 str =
-        Left (Error err)
+    , Left err@(Error _) <- parse p2 str =
+        Left err
     | Left err <- parse p1 str =
         parse p2 str
     | otherwise = parse p1 str

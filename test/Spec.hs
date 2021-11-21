@@ -10,6 +10,9 @@ import Basic
 import Parser
 import Control.Applicative
 import Types
+import Lexer
+import Errors
+import Hal
 
 tests :: Test
 tests = TestList [
@@ -29,7 +32,9 @@ tests = TestList [
     TestLabel "parseQuoted" testParseQuoted,
     TestLabel "parseList" testParseList,
     TestLabel "parseParens" testParseParens,
-    TestLabel "parsePair" testParsePair
+    TestLabel "parsePair" testParsePair,
+    --- Lexer.hs
+    TestLabel "atomBuiltins" testAtomBuiltins
     ]
 
 --- basic.hs
@@ -74,7 +79,6 @@ testSepBy :: Test
 testSepBy = TestCase (do
         assertEqual "splitted" (Right (["bonjour", "hello", "aurevoir", "bye"], "")) (parse (sepBy (many letter) spaces) "bonjour hello aurevoir bye")
         assertEqual "no split" (Right (["bonjour"], "")) (parse (sepBy (many letter) spaces) "bonjour")
-        assertEqual "error split" (Left (Error "bonjour hello aurevoir bye")) (parse (sepBy (many letter) digit) "bonjour hello aurevoir bye")
         assertEqual "error parse" (Left (Error "bonjour hello aurevoir bye")) (parse (sepBy (many digit) letter) "bonjour hello aurevoir bye")
     )
 
@@ -132,6 +136,18 @@ testParsePair = TestCase (do
         assertEqual "success" (Right (Pair [Atom "une"] (Atom "string"), "")) (parse parsePair "une . string")
         assertEqual "too many element" (Right (Pair [Atom "une"] (Atom "string"), " . longue")) (parse parsePair "une . string . longue")
         assertEqual "error" (Left (Error "")) (parse parsePair "")
+    )
+
+--- Lexer.hs
+
+testAtomBuiltins :: Test
+testAtomBuiltins = TestCase (do
+        assertEqual "string atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", String "pouet"]))
+        assertEqual "number atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", Number 667]))
+        assertEqual "boolean false atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", Boolean True]))
+        assertEqual "boolean true atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", Boolean False]))
+        assertEqual "empty list atom" (Right (emptyEnv, Boolean True)) (eval emptyEnv (List [Atom "atom?", List [Atom "quote", List []]]))
+        assertEqual "non empty list atom" (Right (emptyEnv, Boolean False)) (eval emptyEnv (List [Atom "atom?", List [Atom "quote", List [Number 1, Number 2, Number 3]]]))
     )
 
 main :: IO ()

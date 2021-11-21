@@ -7,7 +7,6 @@
 
 module Lists where
 import Types
-import LispError
 import Control.Monad.Except
 
 listBuiltins :: [(String, [Value] -> ThrowsError Value)]
