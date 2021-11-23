@@ -16,11 +16,13 @@ import Lexer
 import Control.Monad.Except
 import Errors
 import Control.Exception
+import Debug.Trace
 
 readExpr :: String -> ThrowsError Value
 readExpr [] = throwError Empty
 readExpr input
-    | Right (x, []) <- parse (spaces >> parseExpr) input =
+    | Right (x, rest) <- parse (spaces >> parseExpr) input
+    , Right(_, []) <- parse spaces rest =
         Right x
     | Left err <- parse (spaces >> parseExpr) input =
         throwError $ Parsing err
@@ -49,18 +51,16 @@ extract env x = (env, extractValue $ trapError True $ fmap show x)
 
 execFiles :: Env -> [String] -> String -> (Env, [String])
 execFiles env [] [] = (env, [])
-execFiles env [] prev = do
-    let evaled = readExpr prev >>= eval env
-    let (envv, val) = extract env evaled
-    let (envvv, res) = execFiles envv [] []
-    (envvv, val : res)
+execFiles env [] prev = (envvv, val : res)
+    where
+        (envv, val) = extract env $ readExpr prev >>= eval env
+        (envvv, res) = execFiles envv [] []
 execFiles env (x:xs) prev
-    | Left _ <- readExpr (x ++ prev) >>= eval env = execFiles env xs (prev ++ x)
-execFiles env (x:xs) prev = do
-    let evaled = readExpr (x ++ prev) >>= eval env
-    let (envv, val) = extract env evaled
-    let (envvv, res) = execFiles envv xs []
-    (envvv, val : res)
+    | Left err <- readExpr (prev ++ " " ++ x) = execFiles env xs (prev ++ " " ++ x)
+    | otherwise = (envvv, val : res)
+        where
+            (envv, val) = extract env $ readExpr (prev ++ " " ++ x) >>= eval env
+            (envvv, res) = execFiles envv xs []
 
 openFiles :: Env -> [String] -> IO (Env, [String])
 openFiles env [] = pure (env, [""])
