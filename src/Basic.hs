@@ -20,7 +20,7 @@ oneOf :: [Char] -> Parser Char
 oneOf arr = Parser (funcOneOf arr)
 
 funcSkipMany :: Char -> Data ()
-funcSkipMany _ [] = Left (Error [])
+funcSkipMany _ [] = Right ((), [])
 funcSkipMany c str
     | head str == c = funcSkipMany c $ tail str
     | otherwise = Right ((), str)

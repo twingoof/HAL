@@ -103,12 +103,7 @@ showVal (Boolean False) = "#f"
 showVal (List list) = "(" ++ unwordList list ++ ")"
 showVal (Pair head tail) = "(" ++ unwordList head ++ " . " ++ showVal tail ++ ")"
 showVal (Builtin _) = "#<procedure>"
-showVal Func {params = args, vaargs = vaargs, body = body} =
-   "(lambda (" ++ unwords (map show args) ++
-    (case vaargs of
-         Nothing -> ""
-         Just arg -> " . " ++ arg)
-    ++ ") " ++ unwords (map show body) ++ ")"
+showVal Func {} = "#<procedure>"
 
 unwordList :: [Value] -> String
 unwordList = unwords . map showVal
