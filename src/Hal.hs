@@ -47,19 +47,26 @@ extract :: Env -> Either Error (Env, Value) -> (Env, String)
 extract _ (Right (env, result)) = (env, show result)
 extract env x = (env, extractValue $ trapError True $ fmap show x)
 
-execFiles :: Env -> [String] -> (Env, [String])
-execFiles env [] = (env, [])
-execFiles env (x:xs) = do
-    let evaled = readExpr x >>= eval env
+execFiles :: Env -> [String] -> String -> (Env, [String])
+execFiles env [] [] = (env, [])
+execFiles env [] prev = do
+    let evaled = readExpr prev >>= eval env
     let (envv, val) = extract env evaled
-    let (envvv, res) = execFiles envv xs
+    let (envvv, res) = execFiles envv [] []
+    (envvv, val : res)
+execFiles env (x:xs) prev
+    | Left _ <- readExpr (x ++ prev) >>= eval env = execFiles env xs (prev ++ x)
+execFiles env (x:xs) prev = do
+    let evaled = readExpr (x ++ prev) >>= eval env
+    let (envv, val) = extract env evaled
+    let (envvv, res) = execFiles envv xs []
     (envvv, val : res)
 
 openFiles :: Env -> [String] -> IO (Env, [String])
 openFiles env [] = pure (env, [""])
 openFiles env (x:xs) = do
     input <- lines <$> readFile x `catch` catchRead
-    let (envv, result) = execFiles env $ filter (not . null) input
+    let (envv, result) = execFiles env (filter (not . null) input) []
     (envvv, recurse) <- openFiles envv xs
     pure (envvv, result ++ recurse)
 
