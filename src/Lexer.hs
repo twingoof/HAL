@@ -56,6 +56,10 @@ eval env cond@(List [Atom "atom?", expr])
     | Right (envv, List x) <- eval env expr = Right (envv, Boolean False)
     | Right (envv,_) <- eval env expr = Right (envv, Boolean True)
     | otherwise = throwError $ BadSpecialForm "Unrecognized special form" cond
+eval env cond@(List (Atom "cond" : List [x, y] : xs))
+    | Right (envv, Boolean True) <- eval env x = eval envv y
+    | Right (envv, Boolean False) <- eval env x = eval envv (List (Atom "cond" : xs))
+    | otherwise = throwError $ BadSpecialForm "Unrecognized special form" cond
 eval env (List (func:args))
     | Right (envv, func) <- eval env func
     , Right tab <- mapM (eval envv) args

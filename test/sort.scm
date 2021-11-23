@@ -6,9 +6,8 @@
         ((< (car l1) (car l2)) (cons (car l1) (merge-lists (cdr l1) l2)))
         (#t (cons (car l2) (merge-lists l1 (cdr l2))))))
 
-(define (split-half l l1 l2)
-    (cond ((null? l) (cons l1 l2))
-        ((null? (cdr l)) (split-half (cdr l) (cons (car l) l ) l2))
+(define (split-half l l1 l2) (cond ((null? l) (cons l1 l2))
+        ((null? (cdr l)) (split-half (cdr l) (cons (car l) l) l2))
         (#t (split-half (cdr (cdr l))
             (cons (car l) l1)
             (cons (car (cdr l)) l2)))))
