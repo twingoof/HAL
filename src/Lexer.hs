@@ -81,14 +81,13 @@ apply (Builtin func) args _ = func args
 apply (Func params vaargs body closure) args env
     | length params /= length args && isNothing vaargs =
         throwError $ NumArgs (toInteger $ length params) args
-    | otherwise = do
-        let envv = bindVars (zip params args) $ concatEnv closure env
-        let envvv = case vaargs of
-                Nothing -> envv
-                Just name -> setVar name (List $ drop (length params) args) envv
-        case last <$> mapM (eval envvv) body of
-            Right (_, res) -> Right res
-            Left err -> throwError err
+    | Right (_, res) <- last <$> mapM (eval envvv) body = Right res
+    | Left err <- last <$> mapM (eval envvv) body = throwError err
+    where
+        envv = bindVars (zip params args) $ concatEnv closure env
+        envvv
+            | Nothing <- vaargs = envv
+            | Just name <- vaargs = setVar name (List $ drop (length params) args) envv
 apply err _ _ = throwError $ NotFunction "Unrecognized special form" $ show err
 
 numBuiltins :: [(String, [Value] -> ThrowsError Value)]
